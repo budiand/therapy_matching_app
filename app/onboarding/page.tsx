@@ -40,15 +40,7 @@ type FormState = {
     consentData: boolean;
 };
 
-const AGE_RANGES = [
-    "Under 18",
-    "18–24",
-    "25–34",
-    "35–44",
-    "45–54",
-    "55–64",
-    "65+",
-];
+const AGE_RANGES = ["Under 18", "18–24", "25–34", "35–44", "45–54", "55–64", "65+"];
 
 const REASONS_GROUPS: { title: string; items: string[] }[] = [
     {
@@ -241,16 +233,13 @@ export default function OnboardingPage() {
             const arr = prev[key];
             return {
                 ...prev,
-                [key]: arr.includes(item)
-                    ? arr.filter((x) => x !== item)
-                    : [...arr, item],
+                [key]: arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item],
             };
         });
     }
 
     const progressPct = useMemo(() => Math.round((step / totalSteps) * 100), [step]);
 
-    // Basic validation per step
     const canGoNext = useMemo(() => {
         if (step === 1) return form.city.trim().length > 0;
         if (step === 2) return form.reasons.length > 0;
@@ -274,20 +263,28 @@ export default function OnboardingPage() {
 
     async function handleSubmit() {
         setError("");
+
+        if (!form.consentData) {
+            setError("Please accept the consent checkbox to continue.");
+            return;
+        }
+
         setSubmitting(true);
 
         try {
-            const res = await fetch("/api/intake", {
+            // ✅ 1) Save intake locally so /matching/results can read it
+            sessionStorage.setItem("intake", JSON.stringify(form));
+
+            // ✅ 2) Optional: also store in DB (do not block redirect if it fails)
+            fetch("/api/intake", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(form),
+            }).catch(() => {
+                // ignore for MVP
             });
 
-            if (!res.ok) {
-                const txt = await res.text().catch(() => "");
-                throw new Error(txt || "Failed to submit intake form.");
-            }
-
+            // ✅ 3) Redirect to results (where matching happens)
             window.location.href = "/matching/results";
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : "Something went wrong.";
@@ -357,10 +354,7 @@ export default function OnboardingPage() {
                                 <div className="md:col-span-2">
                                     <label className="text-sm font-medium">City</label>
                                     <div className="mt-1">
-                                        <CityAutocomplete
-                                            value={form.city}
-                                            onChange={(v: string) => update("city", v)}
-                                        />
+                                        <CityAutocomplete value={form.city} onChange={(v: string) => update("city", v)} />
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
                                         If you choose online sessions, city matters less — but it can help with context/time zone.
@@ -476,10 +470,7 @@ export default function OnboardingPage() {
                     )}
 
                     {step === 4 && (
-                        <Section
-                            title="Goals & expectations"
-                            subtitle="Optional, but it helps us personalize your match."
-                        >
+                        <Section title="Goals & expectations" subtitle="Optional, but it helps us personalize your match.">
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-sm font-medium">
