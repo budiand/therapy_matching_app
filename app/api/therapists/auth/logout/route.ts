@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST() {
   const res = NextResponse.json({ ok: true }, { status: 200 });
 
-  res.cookies.set("tm_uid", "", {
+  res.cookies.set("tm_tid", "", {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

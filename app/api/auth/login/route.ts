@@ -46,7 +46,7 @@ export async function POST(req: Request) {
             httpOnly: true,
             sameSite: "lax",
             path: "/",
-            // secure: true, // activează în production pe HTTPS
+            secure: true, // activează în production pe HTTPS
         });
 
         return res;
