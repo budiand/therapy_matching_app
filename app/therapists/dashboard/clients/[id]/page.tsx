@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 type Note = {
-    id: string;
+    id: string; // noteId in DB
     createdAtISO: string;
     title?: string;
     content: string;
@@ -50,55 +50,23 @@ function initials(name: string) {
     );
 }
 
-function uid() {
-    return Math.random().toString(16).slice(2);
-}
-
 export default function TherapistClientDetailPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
     const clientId = params?.id ?? "unknown";
 
-    // Mock profile (replace with API)
-    const client: ClientProfile = useMemo(
-        () => ({
-            id: clientId,
-            name: clientId === "c2" ? "Alex P." : clientId === "c3" ? "Ioana R." : "Maria D.",
-            status: "active",
-            sinceISO: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-            lastSessionISO: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            goals: "Reduce anxiety symptoms, improve sleep consistency, build healthier boundaries.",
-            quickSummary:
-                "Client struggles with anticipatory anxiety and rumination. Responds well to structured homework and grounding exercises.",
-        }),
-        [clientId]
-    );
+    const [loading, setLoading] = useState(true);
+    const [loadingNotes, setLoadingNotes] = useState(true);
+    const [error, setError] = useState("");
 
-    // Mock notes timeline (replace with API)
-    const [notes, setNotes] = useState<Note[]>([
-        {
-            id: uid(),
-            createdAtISO: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-            title: "Session highlights",
-            content:
-                "Explored triggers related to work emails. Practiced cognitive reframing and a short breathing exercise. Agreed on a sleep routine experiment.",
-            tags: ["CBT", "Sleep"],
-        },
-        {
-            id: uid(),
-            createdAtISO: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-            title: "Progress check",
-            content:
-                "Client reported fewer panic sensations. Introduced values-based actions for the week. Homework: track worry episodes and apply the 2-minute grounding tool.",
-            tags: ["ACT", "Homework"],
-        },
-    ]);
+    const [client, setClient] = useState<ClientProfile | null>(null);
+    const [notes, setNotes] = useState<Note[]>([]);
 
     // Add note form
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [tagsInput, setTagsInput] = useState("CBT, homework");
-    const [error, setError] = useState("");
+    const [savingNote, setSavingNote] = useState(false);
 
     const sortedNotes = useMemo(() => {
         return [...notes].sort(
@@ -106,7 +74,51 @@ export default function TherapistClientDetailPage() {
         );
     }, [notes]);
 
-    function onAddNote() {
+    // ✅ load client + notes
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadClient() {
+            setLoading(true);
+            setError("");
+            try {
+                const res = await fetch(`/api/therapists/clients/${clientId}`, { method: "GET" });
+                const data = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(data?.error || `Failed to load client (${res.status}).`);
+
+                if (!cancelled) setClient(data.client as ClientProfile);
+            } catch (e: any) {
+                if (!cancelled) setError(e?.message || "Failed to load client.");
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
+
+        async function loadNotes() {
+            setLoadingNotes(true);
+            setError("");
+            try {
+                const res = await fetch(`/api/therapists/clients/${clientId}/notes`, { method: "GET" });
+                const data = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(data?.error || `Failed to load notes (${res.status}).`);
+
+                if (!cancelled) setNotes((data.notes ?? []) as Note[]);
+            } catch (e: any) {
+                if (!cancelled) setError(e?.message || "Failed to load notes.");
+            } finally {
+                if (!cancelled) setLoadingNotes(false);
+            }
+        }
+
+        loadClient();
+        loadNotes();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [clientId]);
+
+    async function onAddNote() {
         setError("");
 
         if (content.trim().length < 10) {
@@ -119,22 +131,48 @@ export default function TherapistClientDetailPage() {
             .map((t) => t.trim())
             .filter(Boolean);
 
-        const newNote: Note = {
-            id: uid(),
-            createdAtISO: new Date().toISOString(),
-            title: title.trim() || undefined,
-            content: content.trim(),
-            tags,
-        };
+        setSavingNote(true);
+        try {
+            const res = await fetch(`/api/therapists/clients/${clientId}/notes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: title.trim() || undefined,
+                    content: content.trim(),
+                    tags,
+                }),
+            });
 
-        setNotes((prev) => [newNote, ...prev]);
-        setTitle("");
-        setContent("");
+            const data = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(data?.error || `Failed to add note (${res.status}).`);
+
+            // server returns created note
+            setNotes((prev) => [data.note as Note, ...prev]);
+            setTitle("");
+            setContent("");
+        } catch (e: any) {
+            setError(e?.message || "Failed to add note.");
+        } finally {
+            setSavingNote(false);
+        }
     }
 
-    function onDeleteNote(noteId: string) {
+    async function onDeleteNote(noteId: string) {
         if (!confirm("Delete this note?")) return;
-        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+
+        setError("");
+        try {
+            const res = await fetch(
+                `/api/therapists/clients/${clientId}/notes?noteId=${encodeURIComponent(noteId)}`,
+                { method: "DELETE" }
+            );
+            const data = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(data?.error || `Failed to delete note (${res.status}).`);
+
+            setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        } catch (e: any) {
+            setError(e?.message || "Failed to delete note.");
+        }
     }
 
     return (
@@ -144,12 +182,12 @@ export default function TherapistClientDetailPage() {
                 <div className="flex items-start justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                            {initials(client.name)}
+                            {initials(client?.name ?? "Client")}
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold">{client.name}</h1>
+                            <h1 className="text-3xl font-bold">{client?.name ?? "Client"}</h1>
                             <p className="text-gray-600 mt-1">
-                                Client ID: <span className="font-mono">{client.id}</span>
+                                Client ID: <span className="font-mono">{clientId}</span>
                             </p>
                         </div>
                     </div>
@@ -171,144 +209,146 @@ export default function TherapistClientDetailPage() {
                     </div>
                 </div>
 
-                {/* Top cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <Card title="Client overview">
-                        <div className="space-y-2 text-sm">
-                            <Row label="Status" value={<StatusPill status={client.status} />} />
-                            <Row label="Since" value={formatDate(client.sinceISO)} />
-                            <Row label="Last session" value={formatDateTime(client.lastSessionISO)} />
-                        </div>
-                    </Card>
+                {error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
 
-                    <Card title="Goals">
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                            {client.goals || "—"}
-                        </p>
-                    </Card>
-
-                    <Card title="Quick summary">
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                            {client.quickSummary || "—"}
-                        </p>
-                    </Card>
-                </div>
-
-                {/* Notes + Add note */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-                    {/* Add note */}
-                    <div className="lg:col-span-1">
-                        <Card title="Add a note" subtitle="Saved chronologically for this client">
-                            {error && (
-                                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                                    {error}
+                {loading ? (
+                    <div className="bg-white rounded-2xl border shadow-sm p-10 text-center text-gray-600">
+                        Loading client...
+                    </div>
+                ) : !client ? (
+                    <div className="bg-white rounded-2xl border shadow-sm p-10 text-center">
+                        <h3 className="font-semibold">Client not found</h3>
+                        <p className="text-gray-600 text-sm mt-1">This client may not belong to your account.</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Top cards */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <Card title="Client overview">
+                                <div className="space-y-2 text-sm">
+                                    <Row label="Status" value={<StatusPill status={client.status} />} />
+                                    <Row label="Since" value={formatDate(client.sinceISO)} />
+                                    <Row label="Last session" value={formatDateTime(client.lastSessionISO)} />
                                 </div>
-                            )}
+                            </Card>
 
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="text-sm font-medium">Title (optional)</label>
-                                    <input
-                                        className="mt-1 w-full border rounded-xl px-3 py-2 bg-white"
-                                        placeholder="e.g. Session #3 - main points"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                    />
-                                </div>
+                            <Card title="Goals">
+                                <p className="text-sm text-gray-700 leading-relaxed">{client.goals || "—"}</p>
+                            </Card>
 
-                                <div>
-                                    <label className="text-sm font-medium">Note</label>
-                                    <textarea
-                                        className="mt-1 w-full border rounded-xl px-3 py-2 bg-white min-h-[140px]"
-                                        placeholder="Write session insights, key events, homework, risks, etc."
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="text-sm font-medium">Tags (comma-separated)</label>
-                                    <input
-                                        className="mt-1 w-full border rounded-xl px-3 py-2 bg-white"
-                                        placeholder="e.g. CBT, homework, sleep"
-                                        value={tagsInput}
-                                        onChange={(e) => setTagsInput(e.target.value)}
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={onAddNote}
-                                    className="w-full px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700"
-                                >
-                                    Add note
-                                </button>
-
-                                <p className="text-xs text-gray-500">
-                                    Next step: persist notes in MongoDB and encrypt sensitive data.
+                            <Card title="Quick summary">
+                                <p className="text-sm text-gray-700 leading-relaxed">
+                                    {client.quickSummary || "—"}
                                 </p>
-                            </div>
-                        </Card>
-                    </div>
+                            </Card>
+                        </div>
 
-                    {/* Timeline */}
-                    <div className="lg:col-span-2">
-                        <Card title="Notes timeline" subtitle="Most recent first">
-                            {sortedNotes.length === 0 ? (
-                                <div className="rounded-xl border bg-gray-50 p-6 text-center">
-                                    <h3 className="font-semibold">No notes yet</h3>
-                                    <p className="text-gray-600 text-sm mt-1">
-                                        Add your first note on the left.
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {sortedNotes.map((n) => (
-                                        <div key={n.id} className="rounded-2xl border bg-white p-5">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <p className="text-xs text-gray-500">
-                                                        {formatDateTime(n.createdAtISO)}
-                                                    </p>
-                                                    <p className="font-semibold mt-1">
-                                                        {n.title || "Session note"}
-                                                    </p>
-                                                </div>
-
-                                                <button
-                                                    onClick={() => onDeleteNote(n.id)}
-                                                    className="text-sm font-medium text-red-700 hover:underline"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
-
-                                            <p className="text-sm text-gray-700 mt-3 leading-relaxed whitespace-pre-wrap">
-                                                {n.content}
-                                            </p>
-
-                                            {n.tags.length > 0 && (
-                                                <div className="mt-4 flex flex-wrap gap-2">
-                                                    {n.tags.map((t) => (
-                                                        <span
-                                                            key={t}
-                                                            className="text-xs px-2 py-1 rounded-full border bg-gray-50 text-gray-700"
-                                                        >
-                              {t}
-                            </span>
-                                                    ))}
-                                                </div>
-                                            )}
+                        {/* Notes + Add note */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                            {/* Add note */}
+                            <div className="lg:col-span-1">
+                                <Card title="Add a note" subtitle="Saved chronologically for this client">
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-sm font-medium">Title (optional)</label>
+                                            <input
+                                                className="mt-1 w-full border rounded-xl px-3 py-2 bg-white"
+                                                placeholder="e.g. Session #3 - main points"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                            />
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </Card>
-                    </div>
-                </div>
 
-                <p className="text-xs text-gray-500 mt-6">
-                    Next step: load client details + notes from MongoDB using the clientId param.
-                </p>
+                                        <div>
+                                            <label className="text-sm font-medium">Note</label>
+                                            <textarea
+                                                className="mt-1 w-full border rounded-xl px-3 py-2 bg-white min-h-[140px]"
+                                                placeholder="Write session insights, key events, homework, risks, etc."
+                                                value={content}
+                                                onChange={(e) => setContent(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-sm font-medium">Tags (comma-separated)</label>
+                                            <input
+                                                className="mt-1 w-full border rounded-xl px-3 py-2 bg-white"
+                                                placeholder="e.g. CBT, homework, sleep"
+                                                value={tagsInput}
+                                                onChange={(e) => setTagsInput(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={onAddNote}
+                                            disabled={savingNote}
+                                            className="w-full px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50"
+                                        >
+                                            {savingNote ? "Saving..." : "Add note"}
+                                        </button>
+                                    </div>
+                                </Card>
+                            </div>
+
+                            {/* Timeline */}
+                            <div className="lg:col-span-2">
+                                <Card title="Notes timeline" subtitle="Most recent first">
+                                    {loadingNotes ? (
+                                        <div className="rounded-xl border bg-gray-50 p-6 text-center text-gray-600">
+                                            Loading notes...
+                                        </div>
+                                    ) : sortedNotes.length === 0 ? (
+                                        <div className="rounded-xl border bg-gray-50 p-6 text-center">
+                                            <h3 className="font-semibold">No notes yet</h3>
+                                            <p className="text-gray-600 text-sm mt-1">Add your first note on the left.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {sortedNotes.map((n) => (
+                                                <div key={n.id} className="rounded-2xl border bg-white p-5">
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div>
+                                                            <p className="text-xs text-gray-500">{formatDateTime(n.createdAtISO)}</p>
+                                                            <p className="font-semibold mt-1">{n.title || "Session note"}</p>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => onDeleteNote(n.id)}
+                                                            className="text-sm font-medium text-red-700 hover:underline"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+
+                                                    <p className="text-sm text-gray-700 mt-3 leading-relaxed whitespace-pre-wrap">
+                                                        {n.content}
+                                                    </p>
+
+                                                    {n.tags.length > 0 && (
+                                                        <div className="mt-4 flex flex-wrap gap-2">
+                                                            {n.tags.map((t) => (
+                                                                <span
+                                                                    key={t}
+                                                                    className="text-xs px-2 py-1 rounded-full border bg-gray-50 text-gray-700"
+                                                                >
+                                  {t}
+                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </Card>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -358,9 +398,5 @@ function StatusPill({ status }: { status: "active" | "paused" | "archived" }) {
         archived: "Archived",
     };
 
-    return (
-        <span className={["text-xs px-2 py-0.5 rounded-full border", map[status]].join(" ")}>
-      {label[status]}
-    </span>
-    );
+    return <span className={["text-xs px-2 py-0.5 rounded-full border", map[status]].join(" ")}>{label[status]}</span>;
 }
