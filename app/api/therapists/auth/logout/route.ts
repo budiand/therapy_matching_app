@@ -7,8 +7,8 @@ export async function POST() {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    secure: true,
-    maxAge: 0, // șterge cookie-ul
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 0,
   });
 
   return res;
