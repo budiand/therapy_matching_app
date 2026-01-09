@@ -202,14 +202,41 @@ export default function TherapistsClient() {
   }
 
   async function confirmBooking() {
-    // MVP: doar confirmare. În viitor: POST /api/bookings
-    alert(
-        bookingTherapist && selectedSlot
-            ? `Booked with ${bookingTherapist.name}\nSlot: ${new Date(selectedSlot).toLocaleString()}`
-            : "Select a slot first."
-    );
-    setBookingOpen(false);
+    if (!bookingTherapist || !selectedSlot) {
+      alert("Select a slot first.");
+      return;
+    }
+
+    // durata ședinței – MVP: 50 minute
+    const start = new Date(selectedSlot);
+    const end = new Date(start);
+    end.setMinutes(end.getMinutes() + 50);
+
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          therapistName: bookingTherapist.name,
+          start: start.toISOString(),
+          end: end.toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Booking failed");
+      }
+
+      alert("Session booked successfully!");
+      setBookingOpen(false);
+
+      // opțional: redirect către dashboard
+      // router.push("/dashboard");
+    } catch (e) {
+      alert("Could not book session. Please try again.");
+    }
   }
+
 
   return (
       <div className="min-h-screen bg-gray-50">

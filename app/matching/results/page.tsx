@@ -85,6 +85,36 @@ export default function ResultsPage() {
         );
     }
 
+    async function bookNow(t: Therapist) {
+        // MVP: slot fix (mâine 10:00–10:50)
+        const start = new Date();
+        start.setDate(start.getDate() + 1);
+        start.setHours(10, 0, 0, 0);
+
+        const end = new Date(start);
+        end.setMinutes(end.getMinutes() + 50);
+
+        try {
+            const res = await fetch("/api/bookings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                therapistName: t.name,
+                start: start.toISOString(),
+                end: end.toISOString(),
+            }),
+            });
+
+            if (!res.ok) {
+            throw new Error("Booking failed");
+            }
+
+            alert("Session booked successfully!");
+        } catch {
+            alert("Could not book session. Please try again.");
+        }
+        }
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-5xl mx-auto px-4 py-8">
@@ -158,10 +188,10 @@ export default function ResultsPage() {
 
                                 <div className="mt-5 flex gap-2">
                                     <button
-                                        className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                                        onClick={() => alert("Next: booking flow")}
+                                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                                    onClick={() => bookNow(t)}
                                     >
-                                        Book a session
+                                    Book a session
                                     </button>
 
                                     <button

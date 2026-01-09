@@ -1,6 +1,8 @@
 import connectMongo from "@/db/mongoose";
 import Therapist from "@/models/Therapist";
 import Link from "next/link";
+import BookSessionButton from "../../components/BookSessionButton";
+
 
 export const dynamic = "force-dynamic";
 
@@ -80,19 +82,16 @@ export default async function TherapistProfilePage({ params }: PageProps) {
                     )}
 
                     <div className="mt-6 flex gap-2">
-                        <button
-                            className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                            onClick={() => alert("Next: booking flow")}
-                        >
-                            Book a session
-                        </button>
+                    {/* Booking real – Client Component */}
+                    <BookSessionButton therapistName={therapist.name} />
 
-                        <button
-                            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
-                            onClick={() => alert("Next: availability calendar")}
-                        >
-                            View availability
-                        </button>
+                    {/* Pas viitor */}
+                    <button
+                        className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
+                        onClick={() => alert("Next: availability calendar")}
+                    >
+                        View availability
+                    </button>
                     </div>
                 </div>
             </div>
