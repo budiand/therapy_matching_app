@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
 
@@ -33,69 +33,46 @@ function isUpcoming(iso: string) {
 
 export default function TherapistAppointmentsPage() {
     const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
-    const [statusFilter, setStatusFilter] = useState<
-        "all" | AppointmentStatus
-    >("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | AppointmentStatus>("all");
     const [query, setQuery] = useState("");
 
-    // Mock data (replace later with API)
-    const appointments: Appointment[] = [
-        {
-            id: "a1",
-            clientId: "c1",
-            clientName: "Maria D.",
-            dateISO: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-            durationMin: 50,
-            location: "online",
-            status: "scheduled",
-            notesPreview: "Follow-up on anxiety triggers and sleep routine.",
-        },
-        {
-            id: "a2",
-            clientId: "c2",
-            clientName: "Alex P.",
-            dateISO: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            durationMin: 50,
-            location: "in_person",
-            status: "scheduled",
-            notesPreview: "Discuss boundaries at work and burnout signals.",
-        },
-        {
-            id: "a3",
-            clientId: "c3",
-            clientName: "Anonymous",
-            dateISO: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-            durationMin: 50,
-            location: "online",
-            status: "completed",
-            notesPreview: "Reviewed progress, assigned grounding exercises.",
-        },
-        {
-            id: "a4",
-            clientId: "c4",
-            clientName: "Ioana R.",
-            dateISO: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            durationMin: 50,
-            location: "in_person",
-            status: "cancelled",
-            notesPreview: "Cancelled by client (travel).",
-        },
-    ];
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            setError("");
+
+            try {
+                const res = await fetch("/api/therapists/appointments", { method: "GET" });
+                const data = await res.json().catch(() => null);
+
+                if (!res.ok) {
+                    throw new Error(data?.error || data?.message || `Failed to load (${res.status})`);
+                }
+
+                setAppointments(Array.isArray(data?.appointments) ? data.appointments : []);
+            } catch (e: any) {
+                setError(e?.message || "Something went wrong.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        load();
+    }, []);
 
     const filtered = useMemo(() => {
         const byTab = appointments.filter((a) =>
             tab === "upcoming" ? isUpcoming(a.dateISO) : !isUpcoming(a.dateISO)
         );
 
-        const byStatus =
-            statusFilter === "all"
-                ? byTab
-                : byTab.filter((a) => a.status === statusFilter);
+        const byStatus = statusFilter === "all" ? byTab : byTab.filter((a) => a.status === statusFilter);
 
         const q = query.trim().toLowerCase();
-        const byQuery = q
-            ? byStatus.filter((a) => a.clientName.toLowerCase().includes(q))
-            : byStatus;
+        const byQuery = q ? byStatus.filter((a) => a.clientName.toLowerCase().includes(q)) : byStatus;
 
         // Sort
         return byQuery.sort((a, b) =>
@@ -125,31 +102,29 @@ export default function TherapistAppointmentsPage() {
                             Back
                         </Link>
 
-                        {/* Optional: create new appointment later */}
                         <button
                             className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
                             onClick={() => alert("Add appointment flow goes here")}
+                            type="button"
                         >
                             + New appointment
                         </button>
                     </div>
                 </div>
 
+                {error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
                 {/* Controls */}
                 <div className="bg-white rounded-2xl border shadow-sm p-4 md:p-5">
                     <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
                         {/* Tabs */}
                         <div className="flex rounded-xl border p-1 bg-gray-50 w-fit">
-                            <TabButton
-                                active={tab === "upcoming"}
-                                label="Upcoming"
-                                onClick={() => setTab("upcoming")}
-                            />
-                            <TabButton
-                                active={tab === "past"}
-                                label="Past"
-                                onClick={() => setTab("past")}
-                            />
+                            <TabButton active={tab === "upcoming"} label="Upcoming" onClick={() => setTab("upcoming")} />
+                            <TabButton active={tab === "past"} label="Past" onClick={() => setTab("past")} />
                         </div>
 
                         {/* Search */}
@@ -167,9 +142,7 @@ export default function TherapistAppointmentsPage() {
                             <select
                                 className="w-full border rounded-xl px-3 py-2 bg-white"
                                 value={statusFilter}
-                                onChange={(e) =>
-                                    setStatusFilter(e.target.value as any)
-                                }
+                                onChange={(e) => setStatusFilter(e.target.value as any)}
                             >
                                 <option value="all">All statuses</option>
                                 <option value="scheduled">Scheduled</option>
@@ -183,7 +156,11 @@ export default function TherapistAppointmentsPage() {
 
                 {/* List */}
                 <div className="mt-6">
-                    {filtered.length === 0 ? (
+                    {loading ? (
+                        <div className="bg-white rounded-2xl border shadow-sm p-10 text-center text-gray-600">
+                            Loading appointments…
+                        </div>
+                    ) : filtered.length === 0 ? (
                         <EmptyState tab={tab} />
                     ) : (
                         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
@@ -196,10 +173,7 @@ export default function TherapistAppointmentsPage() {
 
                             <div className="divide-y">
                                 {filtered.map((a) => (
-                                    <div
-                                        key={a.id}
-                                        className="grid grid-cols-12 gap-3 px-5 py-4 items-center"
-                                    >
+                                    <div key={a.id} className="grid grid-cols-12 gap-3 px-5 py-4 items-center">
                                         <div className="col-span-12 md:col-span-5">
                                             <div className="flex items-start gap-3">
                                                 <Avatar name={a.clientName} />
@@ -216,12 +190,9 @@ export default function TherapistAppointmentsPage() {
                                         </div>
 
                                         <div className="col-span-6 md:col-span-3">
-                                            <p className="font-medium">
-                                                {formatDateTime(a.dateISO)}
-                                            </p>
+                                            <p className="font-medium">{formatDateTime(a.dateISO)}</p>
                                             <p className="text-sm text-gray-600">
-                                                {a.durationMin} min ·{" "}
-                                                {a.location === "online" ? "Online" : "In person"}
+                                                {a.durationMin} min · {a.location === "online" ? "Online" : "In person"}
                                             </p>
                                         </div>
 
@@ -241,18 +212,16 @@ export default function TherapistAppointmentsPage() {
 
                                             <button
                                                 className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
-                                                onClick={() =>
-                                                    alert(`Reschedule flow for appointment ${a.id}`)
-                                                }
+                                                onClick={() => alert(`Reschedule flow for appointment ${a.id}`)}
+                                                type="button"
                                             >
                                                 Reschedule
                                             </button>
 
                                             <button
                                                 className="px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-sm"
-                                                onClick={() =>
-                                                    alert(`Cancel flow for appointment ${a.id}`)
-                                                }
+                                                onClick={() => alert(`Cancel flow for appointment ${a.id}`)}
+                                                type="button"
                                             >
                                                 Cancel
                                             </button>
@@ -264,9 +233,8 @@ export default function TherapistAppointmentsPage() {
                     )}
                 </div>
 
-                {/* Hint */}
                 <p className="text-xs text-gray-500 mt-4">
-                    Tip: Later you can connect this page to your database and replace mock data.
+                    This list is per logged-in therapist (cookie <code>tm_tid</code>).
                 </p>
             </div>
         </div>
@@ -290,9 +258,7 @@ function TabButton({
             onClick={onClick}
             className={[
                 "px-4 py-2 rounded-lg text-sm font-medium transition",
-                active
-                    ? "bg-white shadow-sm border text-gray-900"
-                    : "text-gray-600 hover:text-gray-900",
+                active ? "bg-white shadow-sm border text-gray-900" : "text-gray-600 hover:text-gray-900",
             ].join(" ")}
         >
             {label}
@@ -316,12 +282,7 @@ function StatusPill({ status }: { status: AppointmentStatus }) {
     };
 
     return (
-        <span
-            className={[
-                "text-xs px-2 py-0.5 rounded-full border",
-                map[status],
-            ].join(" ")}
-        >
+        <span className={["text-xs px-2 py-0.5 rounded-full border", map[status]].join(" ")}>
       {label[status]}
     </span>
     );
