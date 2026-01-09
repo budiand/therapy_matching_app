@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type DayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
 type Slot = {
-    id: string;
-    start: string; // "09:00"
-    end: string;   // "12:30"
+    id: string;      // UI id only
+    start: string;   // "09:00"
+    end: string;     // "12:30"
 };
 
 const DAYS: DayKey[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -34,28 +34,83 @@ function uid() {
     return Math.random().toString(16).slice(2);
 }
 
-export default function TherapistAvailabilityPage() {
-    // Default mock availability
-    const [availability, setAvailability] = useState<Record<DayKey, Slot[]>>({
-        Mon: [{ id: uid(), start: "10:00", end: "13:00" }],
-        Tue: [{ id: uid(), start: "09:00", end: "12:00" }],
+function emptyWeekly(): Record<DayKey, Slot[]> {
+    return {
+        Mon: [],
+        Tue: [],
         Wed: [],
-        Thu: [{ id: uid(), start: "14:00", end: "18:00" }],
-        Fri: [{ id: uid(), start: "10:00", end: "12:00" }],
+        Thu: [],
+        Fri: [],
         Sat: [],
         Sun: [],
-    });
+    };
+}
+
+function fromApiWeekly(apiWeekly: any): Record<DayKey, Slot[]> {
+    const base = emptyWeekly();
+    for (const d of DAYS) {
+        const arr = Array.isArray(apiWeekly?.[d]) ? apiWeekly[d] : [];
+        base[d] = arr.map((s: any) => ({
+            id: uid(),
+            start: String(s?.start || ""),
+            end: String(s?.end || ""),
+        }));
+    }
+    return base;
+}
+
+function toApiWeekly(stateWeekly: Record<DayKey, Slot[]>) {
+    // strip UI ids
+    const weekly: any = {};
+    for (const d of DAYS) {
+        weekly[d] = stateWeekly[d].map((s) => ({ start: s.start, end: s.end }));
+    }
+    return weekly;
+}
+
+export default function TherapistAvailabilityPage() {
+    const [availability, setAvailability] = useState<Record<DayKey, Slot[]>>(emptyWeekly());
 
     const [activeDay, setActiveDay] = useState<DayKey>("Mon");
     const [start, setStart] = useState("09:00");
     const [end, setEnd] = useState("10:00");
+
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [success, setSuccess] = useState("");
 
     const daySlots = useMemo(() => availability[activeDay], [availability, activeDay]);
 
+    // Load from DB (per therapist via cookie tm_tid)
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            setError("");
+            setSuccess("");
+
+            try {
+                const res = await fetch("/api/therapists/availability", { method: "GET" });
+                const data = await res.json().catch(() => null);
+
+                if (!res.ok) {
+                    throw new Error(data?.error || data?.message || `Failed to load (${res.status})`);
+                }
+
+                setAvailability(fromApiWeekly(data?.weekly));
+            } catch (e: any) {
+                setError(e?.message || "Could not load availability.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        load();
+    }, []);
+
     function addSlot() {
         setError("");
+        setSuccess("");
 
         if (!start || !end) return setError("Please select a start and end time.");
         if (minutes(end) <= minutes(start)) return setError("End time must be after start time.");
@@ -63,7 +118,6 @@ export default function TherapistAvailabilityPage() {
         const newSlot: Slot = { id: uid(), start, end };
         const existing = availability[activeDay];
 
-        // Check overlap with existing slots
         for (const s of existing) {
             if (overlaps(s, newSlot)) {
                 return setError("This time range overlaps an existing slot.");
@@ -77,6 +131,7 @@ export default function TherapistAvailabilityPage() {
     }
 
     function removeSlot(day: DayKey, id: string) {
+        setSuccess("");
         setAvailability((prev) => ({
             ...prev,
             [day]: prev[day].filter((s) => s.id !== id),
@@ -84,17 +139,20 @@ export default function TherapistAvailabilityPage() {
     }
 
     function clearDay(day: DayKey) {
+        setSuccess("");
         setAvailability((prev) => ({ ...prev, [day]: [] }));
     }
 
     function copyDayTo(dayFrom: DayKey, dayTo: DayKey) {
+        setSuccess("");
         setAvailability((prev) => ({
             ...prev,
-            [dayTo]: prev[dayFrom].map((s) => ({ ...s, id: uid() })), // new ids
+            [dayTo]: prev[dayFrom].map((s) => ({ ...s, id: uid() })),
         }));
     }
 
     function copyToMultiple(targetDays: DayKey[]) {
+        setSuccess("");
         setAvailability((prev) => {
             const base = prev[activeDay].map((s) => ({ ...s }));
             const next = { ...prev };
@@ -109,13 +167,25 @@ export default function TherapistAvailabilityPage() {
     async function onSave() {
         setSaving(true);
         setError("");
+        setSuccess("");
+
         try {
-            // TODO: connect to your API:
-            // await fetch("/api/therapists/availability", { method: "POST", body: JSON.stringify(availability) })
-            await new Promise((r) => setTimeout(r, 600));
-            alert("Saved (UI only). Next step: persist availability in your database.");
-        } catch {
-            setError("Something went wrong while saving.");
+            const res = await fetch("/api/therapists/availability", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ weekly: toApiWeekly(availability) }),
+            });
+
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                throw new Error(data?.error || data?.message || `Save failed (${res.status})`);
+            }
+
+            // replace with sanitized data from server
+            setAvailability(fromApiWeekly(data?.weekly));
+            setSuccess("Availability saved.");
+        } catch (e: any) {
+            setError(e?.message || "Something went wrong while saving.");
         } finally {
             setSaving(false);
         }
@@ -134,22 +204,32 @@ export default function TherapistAvailabilityPage() {
                     </div>
 
                     <div className="flex gap-3">
-                        <Link
-                            href="/therapists/dashboard"
-                            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
-                        >
+                        <Link href="/therapists/dashboard" className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
                             Back
                         </Link>
 
                         <button
                             onClick={onSave}
-                            disabled={saving}
+                            disabled={saving || loading}
                             className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50"
+                            type="button"
                         >
                             {saving ? "Saving..." : "Save availability"}
                         </button>
                     </div>
                 </div>
+
+                {error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                        {success}
+                    </div>
+                )}
 
                 {/* Main grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -166,12 +246,11 @@ export default function TherapistAvailabilityPage() {
                                         onClick={() => {
                                             setActiveDay(d);
                                             setError("");
+                                            setSuccess("");
                                         }}
                                         className={[
                                             "py-2 rounded-xl border text-sm font-medium transition",
-                                            activeDay === d
-                                                ? "bg-indigo-600 text-white border-indigo-600"
-                                                : "bg-white hover:bg-gray-50",
+                                            activeDay === d ? "bg-indigo-600 text-white border-indigo-600" : "bg-white hover:bg-gray-50",
                                         ].join(" ")}
                                     >
                                         {d}
@@ -194,16 +273,11 @@ export default function TherapistAvailabilityPage() {
                                     type="button"
                                     onClick={() => clearDay(activeDay)}
                                     className="text-sm font-medium text-red-700 hover:underline"
+                                    disabled={loading}
                                 >
                                     Clear day
                                 </button>
                             </div>
-
-                            {error && (
-                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                                    {error}
-                                </div>
-                            )}
 
                             <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                                 <div>
@@ -213,6 +287,7 @@ export default function TherapistAvailabilityPage() {
                                         className="mt-1 w-full border rounded-xl px-3 py-2 bg-white"
                                         value={start}
                                         onChange={(e) => setStart(e.target.value)}
+                                        disabled={loading}
                                     />
                                 </div>
 
@@ -223,13 +298,15 @@ export default function TherapistAvailabilityPage() {
                                         className="mt-1 w-full border rounded-xl px-3 py-2 bg-white"
                                         value={end}
                                         onChange={(e) => setEnd(e.target.value)}
+                                        disabled={loading}
                                     />
                                 </div>
 
                                 <button
                                     type="button"
                                     onClick={addSlot}
-                                    className="w-full md:w-auto px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+                                    className="w-full md:w-auto px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50"
+                                    disabled={loading}
                                 >
                                     Add slot
                                 </button>
@@ -237,28 +314,25 @@ export default function TherapistAvailabilityPage() {
 
                             {/* Slots list */}
                             <div className="mt-6">
-                                <p className="text-sm font-medium text-gray-700">
-                                    Slots for {activeDay}
-                                </p>
+                                <p className="text-sm font-medium text-gray-700">Slots for {activeDay}</p>
 
-                                {daySlots.length === 0 ? (
+                                {loading ? (
+                                    <div className="mt-3 rounded-xl border bg-gray-50 p-4 text-sm text-gray-600">
+                                        Loading…
+                                    </div>
+                                ) : daySlots.length === 0 ? (
                                     <div className="mt-3 rounded-xl border bg-gray-50 p-4 text-sm text-gray-600">
                                         No slots yet. Add one above.
                                     </div>
                                 ) : (
                                     <div className="mt-3 divide-y rounded-xl border bg-white">
                                         {daySlots.map((s) => (
-                                            <div
-                                                key={s.id}
-                                                className="flex items-center justify-between px-4 py-3"
-                                            >
+                                            <div key={s.id} className="flex items-center justify-between px-4 py-3">
                                                 <div>
                                                     <p className="font-medium">
                                                         {s.start} – {s.end}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        Bookable window
-                                                    </p>
+                                                    <p className="text-xs text-gray-500">Bookable window</p>
                                                 </div>
 
                                                 <button
@@ -281,9 +355,7 @@ export default function TherapistAvailabilityPage() {
                         {/* Weekly overview */}
                         <div className="bg-white rounded-2xl border shadow-sm p-5">
                             <h2 className="text-lg font-semibold">Weekly overview</h2>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Quick view of your schedule by day.
-                            </p>
+                            <p className="text-sm text-gray-600 mt-1">Quick view of your schedule by day.</p>
 
                             <div className="mt-4 space-y-3">
                                 {DAYS.map((d) => (
@@ -294,9 +366,7 @@ export default function TherapistAvailabilityPage() {
                                         <div>
                                             <p className="font-medium">{d}</p>
                                             <p className="text-xs text-gray-600 mt-0.5">
-                                                {availability[d].length === 0
-                                                    ? "No slots"
-                                                    : `${availability[d].length} slot(s)`}
+                                                {availability[d].length === 0 ? "No slots" : `${availability[d].length} slot(s)`}
                                             </p>
                                         </div>
 
@@ -315,9 +385,7 @@ export default function TherapistAvailabilityPage() {
                         {/* Copy helper */}
                         <div className="bg-white rounded-2xl border shadow-sm p-5">
                             <h2 className="text-lg font-semibold">Copy slots</h2>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Reuse {activeDay} slots to save time.
-                            </p>
+                            <p className="text-sm text-gray-600 mt-1">Reuse {activeDay} slots to save time.</p>
 
                             <div className="mt-4 grid grid-cols-2 gap-2">
                                 {DAYS.filter((d) => d !== activeDay).map((d) => (
@@ -325,8 +393,8 @@ export default function TherapistAvailabilityPage() {
                                         key={d}
                                         type="button"
                                         onClick={() => copyDayTo(activeDay, d)}
-                                        className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 text-sm"
-                                        disabled={availability[activeDay].length === 0}
+                                        className="px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 text-sm disabled:opacity-50"
+                                        disabled={availability[activeDay].length === 0 || loading}
                                     >
                                         Copy to {d}
                                     </button>
@@ -337,24 +405,22 @@ export default function TherapistAvailabilityPage() {
                                 <button
                                     type="button"
                                     className="w-full px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50"
-                                    disabled={availability[activeDay].length === 0}
-                                    onClick={() =>
-                                        copyToMultiple(DAYS.filter((d) => d !== activeDay))
-                                    }
+                                    disabled={availability[activeDay].length === 0 || loading}
+                                    onClick={() => copyToMultiple(DAYS.filter((d) => d !== activeDay))}
                                 >
                                     Copy to all days
                                 </button>
                             </div>
 
                             <p className="text-xs text-gray-500 mt-3">
-                                Tip: You can later support exceptions (vacations, one-off days) using date-specific availability.
+                                Tip: Later you can support exceptions (vacations, one-off days) using date-specific availability.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <p className="text-xs text-gray-500 mt-6">
-                    Next step: connect “Save availability” to MongoDB and generate available booking times for clients.
+                    This availability is saved per logged-in therapist (cookie <code>tm_tid</code>).
                 </p>
             </div>
         </div>
