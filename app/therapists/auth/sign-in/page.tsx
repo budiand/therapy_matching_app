@@ -85,7 +85,7 @@ export default function TherapistSignInPage() {
           <button
             type="button"
             className="text-indigo-700 font-medium hover:underline"
-            onClick={() => router.push("/therapist/sign-up")}
+            onClick={() => router.push("/therapists/auth/sign-up")}
           >
             Sign up
           </button>
