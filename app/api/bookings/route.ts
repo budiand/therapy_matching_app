@@ -11,7 +11,7 @@ function getUid() {
   return cookies().get("tm_uid")?.value || null;
 }
 
-// ✅ CLIENT calendar: returns [{ id, therapistId, therapistName, start, end, location, status }]
+// ✅ Calendar client: returnează ARRAY direct, cum vrea BookingCalendar
 export async function GET() {
   try {
     await connectMongo();
@@ -22,7 +22,7 @@ export async function GET() {
       return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
     }
 
-    // ✅ FIX: Appointment uses userId
+    // IMPORTANT: AppointmentSchema-ul tău are userId (nu clientId)
     const appts = await Appointment.find({ userId: uid })
         .sort({ dateISO: 1 })
         .lean();
@@ -53,10 +53,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(out, {
-      status: 200,
-      headers: { "Cache-Control": "no-store" },
-    });
+    return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("BOOKINGS GET ERROR:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -91,7 +88,7 @@ export async function POST(req: Request) {
 
     const durationMin = Number(body?.durationMin ?? 50);
 
-    // ✅ FIX: save as userId
+    // ✅ creează Appointment în colecția folosită de calendare
     const created = await Appointment.create({
       therapistId,
       userId: uid,
