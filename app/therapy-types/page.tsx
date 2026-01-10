@@ -27,320 +27,320 @@ const THERAPIES: Therapy[] = [
     id: "CBT",
     name: "CBT (Cognitive Behavioral Therapy)",
     short:
-      "Terapie structurată, orientată pe obiective, care lucrează cu legătura dintre gânduri, emoții și comportamente.",
+      "A structured, goal-oriented therapy that works on the link between thoughts, emotions, and behaviors.",
     for: [
-      "anxietate (inclusiv socială)",
-      "depresie ușoară–moderată",
-      "atacuri de panică",
-      "stres / burnout",
-      "insomnie (CBT-I)",
-      "gestionarea furiei",
-      "perfecționism, ruminație",
+      "anxiety (including social anxiety)",
+      "mild–moderate depression",
+      "panic attacks",
+      "stress / burnout",
+      "insomnia (CBT-I)",
+      "anger management",
+      "perfectionism and rumination",
     ],
     howItWorks: [
-      "identifici tipare de gândire (distorsiuni cognitive) și le testezi",
-      "exerciții între ședințe (jurnal, expunere graduală, activare comportamentală)",
-      "învățare de abilități: coping, problem solving, restructurare",
+      "identify thinking patterns (cognitive distortions) and test them",
+      "between-session practice (journaling, graded exposure, behavioral activation)",
+      "skills training: coping, problem solving, cognitive restructuring",
     ],
     goodIf: [
-      "vrei plan clar și progres măsurabil",
-      "îți place să lucrezi practic între ședințe",
-      "ai nevoie de instrumente concrete pentru anxietate/stres",
+      "you want a clear plan and measurable progress",
+      "you like practical work between sessions",
+      "you want concrete tools for anxiety and stress",
     ],
     whatToAsk: [
-      "Cum setăm obiectivele și cum măsurăm progresul?",
-      "Dați exerciții între ședințe? Cum arată concret?",
-      "Cum abordăm expunerea dacă am anxietate/panică?",
+      "How do we set goals and track progress?",
+      "Do you give homework between sessions? What does it look like?",
+      "How do you approach exposure work for anxiety/panic?",
     ],
     notes: [
-      "De obicei e mai scurtă ca durată decât terapiile exploratorii, dar depinde de caz.",
+      "Often shorter-term than exploratory therapies, but duration depends on the case.",
     ],
   },
   {
     id: "ACT",
     name: "ACT (Acceptance and Commitment Therapy)",
     short:
-      "Te ajută să faci loc emoțiilor dificile fără să te lupți cu ele și să te miști spre valori (ce contează pentru tine).",
+      "Helps you make room for difficult feelings without fighting them, while moving toward values (what matters to you).",
     for: [
-      "anxietate și îngrijorare cronică",
-      "stres, burnout",
-      "depresie",
-      "durere cronică / afecțiuni medicale",
-      "perfecționism",
-      "probleme de motivație / sens",
+      "anxiety and chronic worry",
+      "stress and burnout",
+      "depression",
+      "chronic pain / medical conditions",
+      "perfectionism",
+      "motivation and meaning-related struggles",
     ],
     howItWorks: [
-      "lucrezi cu valori (direcții de viață) și angajamente concrete",
-      "defuziune: observi gândurile ca gânduri, nu ca adevăruri absolute",
-      "acceptare + mindfulness (ancorare în prezent)",
+      "clarify your values and build concrete commitments",
+      "defusion: learn to notice thoughts as thoughts, not absolute truths",
+      "acceptance + mindfulness (grounding in the present moment)",
     ],
     goodIf: [
-      "te simți blocat(ă) de anxietate și evitări",
-      "vrei să-ți recapeți direcția și sensul",
-      "ai ruminație și autocritică puternică",
+      "you feel stuck in anxiety and avoidance",
+      "you want direction and meaning again",
+      "you struggle with rumination and harsh self-criticism",
     ],
     whatToAsk: [
-      "Cum lucrăm cu valorile și ce înseamnă un plan de acțiune?",
-      "Ce exerciții de defuziune/mindfulness folosiți?",
-      "Cum abordăm evitarea și procrastinarea?",
+      "How do we work with values and turn them into action plans?",
+      "What defusion or mindfulness exercises do you use?",
+      "How do you address avoidance and procrastination?",
     ],
   },
   {
     id: "Psychodynamic",
     name: "Psychodynamic Therapy",
     short:
-      "Terapie exploratorie: înțelegi tipare relaționale și emoționale profunde, adesea legate de experiențe timpurii.",
+      "An exploratory approach focused on deeper emotional and relational patterns, often connected to early experiences.",
     for: [
-      "dificultăți relaționale recurente",
-      "auto-sabotaj, tipare repetitive",
-      "anxietate/depresie cu rădăcini vechi",
-      "probleme de identitate / stimă de sine",
-      "traume relaționale (în funcție de formare)",
+      "repeating relationship difficulties",
+      "self-sabotage and recurring patterns",
+      "anxiety/depression with deeper roots",
+      "identity and self-esteem concerns",
+      "relational trauma (depending on training)",
     ],
     howItWorks: [
-      "explorare a emoțiilor și semnificațiilor din spatele reacțiilor",
-      "observarea tiparelor care apar și în relația terapeutică (alianță/transfer)",
-      "clarificare, insight, integrare",
+      "explore emotions and meanings beneath reactions",
+      "notice patterns that show up in relationships (including the therapeutic relationship)",
+      "insight, integration, and long-term change",
     ],
     goodIf: [
-      "vrei să înțelegi „de ce mi se tot întâmplă la fel?”",
-      "ai obiective de profunzime (nu doar simptome)",
-      "îți place reflecția și explorarea",
+      "you want to understand: “why does this keep happening?”",
+      "you want depth work (not only symptom relief)",
+      "you like reflection and exploration",
     ],
     whatToAsk: [
-      "Care e stilul dvs. (mai structurat sau mai exploratoriu)?",
-      "Cât de des recomandați ședințe și pe ce orizont de timp?",
-      "Cum abordați trauma și siguranța emoțională în proces?",
+      "What’s your style (more structured or more exploratory)?",
+      "How often do you recommend sessions and for what time horizon?",
+      "How do you approach trauma and emotional safety in therapy?",
     ],
   },
   {
     id: "Humanistic",
-    name: "Humanistic Therapy (ex. Person-Centered)",
+    name: "Humanistic Therapy (e.g., Person-Centered)",
     short:
-      "Accent pe relația terapeutică, acceptare, autenticitate și dezvoltare personală (vindecare prin conectare și înțelegere).",
+      "Focused on the therapeutic relationship, acceptance, authenticity, and growth—healing through understanding and connection.",
     for: [
-      "stima de sine",
-      "autocritică, rușine",
-      "dificultăți emoționale generale",
-      "crize existențiale / sens",
-      "relații și comunicare",
+      "self-esteem and self-worth",
+      "shame and harsh self-criticism",
+      "general emotional difficulties",
+      "existential crises / meaning",
+      "relationships and communication",
     ],
     howItWorks: [
-      "spațiu sigur și empatic pentru explorare",
-      "validare emoțională, clarificare, conștientizare",
-      "creștere personală și autonomie",
+      "a safe, empathic space for exploration",
+      "emotional validation, clarity, self-awareness",
+      "personal growth and autonomy",
     ],
     goodIf: [
-      "vrei un terapeut cald, centrat pe relație",
-      "ai nevoie să te simți înțeles/înțeleasă înainte de strategii",
-      "vrei să lucrezi cu emoții și autenticitate",
+      "you want a warm, relationship-centered therapist",
+      "you need understanding before strategies",
+      "you want to work deeply with emotions and authenticity",
     ],
     whatToAsk: [
-      "Cum arată o ședință tipică în abordarea dvs.?",
-      "Cum lucrăm cu obiectivele (dacă vreau și structură)?",
-      "Cum gestionați momentele intense emoțional?",
+      "What does a typical session look like in your approach?",
+      "How do we work with goals if I also want structure?",
+      "How do you support clients during intense emotional moments?",
     ],
   },
   {
     id: "Schema",
     name: "Schema Therapy",
     short:
-      "Integrează CBT + atașament: lucrează cu „scheme” (tipare) formate devreme și cu modurile emoționale.",
+      "Combines CBT and attachment work. It targets early-formed ‘schemas’ and emotional ‘modes’ that keep repeating in adulthood.",
     for: [
-      "tipare relaționale dureroase",
-      "dificultăți persistente de stimă de sine",
-      "tulburări de personalitate (în special BPD) – când e cazul",
-      "traume relaționale / nevoi emoționale neîmplinite",
-      "anxietate/depresie recurente",
+      "painful relationship patterns",
+      "persistent self-esteem struggles",
+      "personality difficulties (e.g., BPD) when relevant",
+      "relational trauma / unmet emotional needs",
+      "recurrent anxiety or depression",
     ],
     howItWorks: [
-      "identificare scheme (abandon, defect, standarde înalte etc.)",
-      "lucru experiențial (imagery rescripting), dialoguri între „moduri”",
-      "reparenting limitat: corectare relațională în limite terapeutice",
+      "identify schemas (abandonment, defectiveness, unrelenting standards, etc.)",
+      "experiential work (imagery rescripting), dialogues between ‘modes’",
+      "limited reparenting: corrective emotional experience within clear boundaries",
     ],
     goodIf: [
-      "simți că problemele revin indiferent câte „tehnici” încerci",
-      "ai reacții emoționale foarte intense și vechi",
-      "vrei profunzime + tehnici concrete",
+      "you feel problems return no matter how many ‘techniques’ you try",
+      "your emotional reactions feel intense and long-standing",
+      "you want depth + practical tools",
     ],
     whatToAsk: [
-      "Lucrați cu moduri și exerciții experiențiale (imagery)?",
-      "Cum definim schemele și ce plan avem între ședințe?",
-      "Ce experiență aveți cu trauma relațională / atașament?",
+      "Do you work with modes and experiential techniques (imagery)?",
+      "How do we define schemas and what’s the between-session plan?",
+      "What experience do you have with attachment and relational trauma?",
     ],
   },
   {
     id: "Systemic",
     name: "Systemic Therapy (Family / Couples)",
     short:
-      "Privește problemele în contextul relațiilor și al sistemelor (familie, cuplu, dinamici).",
+      "Looks at difficulties in the context of relationships and systems (couple, family, relational dynamics).",
     for: [
-      "terapie de cuplu",
-      "conflicte familiale",
-      "parenting / relația părinte-copil",
-      "comunicare și limite",
-      "evenimente de viață (divorț, mutare, pierdere)",
+      "couples therapy",
+      "family conflict",
+      "parenting and parent–child dynamics",
+      "communication and boundaries",
+      "life transitions (divorce, relocation, grief)",
     ],
     howItWorks: [
-      "mapare relațională (genogramă, tipare de comunicare)",
-      "intervenții pe reguli/dinamici ale sistemului",
-      "exerciții de comunicare și negociere",
+      "map relational patterns (communication loops, family roles)",
+      "interventions targeting system rules and dynamics",
+      "communication and negotiation exercises",
     ],
     goodIf: [
-      "vrei să lucrezi cu partenerul/familia",
-      "problema apare mai ales în relații",
-      "vrei claritate pe roluri, limite, comunicare",
+      "you want to work with your partner/family",
+      "the problem shows up mostly in relationships",
+      "you want clarity on roles, boundaries, and communication",
     ],
     whatToAsk: [
-      "Lucrați cu amândoi în ședințe? Cum gestionați confidențialitatea?",
-      "Ce model folosiți (EFT, structural, narativ etc.)?",
-      "Cum definim obiective comune și pași între ședințe?",
+      "Do you see partners/family members together? How do you handle confidentiality?",
+      "What model do you use (EFT, structural, narrative, etc.)?",
+      "How do we define shared goals and steps between sessions?",
     ],
   },
   {
     id: "Integrative",
     name: "Integrative Therapy",
     short:
-      "Combină metode (CBT/ACT/Schema/Psychodynamic etc.) în funcție de nevoile tale, nu „one size fits all”.",
+      "Combines methods (CBT/ACT/Schema/Psychodynamic, etc.) depending on your needs—rather than one single approach for everyone.",
     for: [
-      "cazuri mixte (anxietate + relații + stimă de sine)",
-      "când ai încercat o singură metodă și nu a fost suficient",
-      "nevoi variate de-a lungul timpului",
+      "mixed concerns (anxiety + relationships + self-esteem)",
+      "when a single method wasn’t enough",
+      "different needs across different life phases",
     ],
     howItWorks: [
-      "evaluare inițială clară + plan flexibil",
-      "folosește tehnici diferite pe etape (stabilizare → procesare → integrare)",
-      "focus atât pe simptome, cât și pe cauze",
+      "clear initial assessment + flexible plan",
+      "uses different tools across stages (stabilize → process → integrate)",
+      "focuses on both symptoms and underlying patterns",
     ],
     goodIf: [
-      "vrei flexibilitate și adaptare",
-      "ai mai multe obiective simultan",
-      "vrei și structură, și explorare",
+      "you want flexibility and personalization",
+      "you have multiple goals at once",
+      "you want both structure and exploration",
     ],
     whatToAsk: [
-      "Ce școli integrați concret și când alegeți fiecare?",
-      "Cum rămâneți consecvent(ă) în plan dacă folosiți metode diferite?",
-      "Ce înseamnă progres pentru dvs. în cazul meu?",
+      "Which approaches do you integrate and when do you choose each one?",
+      "How do you keep the plan consistent while using different methods?",
+      "What does progress look like for my case?",
     ],
   },
   {
     id: "Mindfulness",
-    name: "Mindfulness-based (ex. MBSR / MBCT)",
+    name: "Mindfulness-based (e.g., MBSR / MBCT)",
     short:
-      "Folosirea atenției conștiente ca abilitate: observi gânduri/emoții fără să te agăți de ele; reduce stresul și ruminația.",
+      "Uses mindfulness as a skill: noticing thoughts and emotions without getting pulled in—reducing stress and rumination.",
     for: [
-      "stres și burnout",
-      "anxietate",
-      "ruminație / overthinking",
-      "prevenirea recăderilor în depresie (MBCT)",
-      "somatizări (în unele cazuri)",
+      "stress and burnout",
+      "anxiety",
+      "rumination / overthinking",
+      "relapse prevention in depression (MBCT)",
+      "some mind–body symptoms (depending on context)",
     ],
     howItWorks: [
-      "practică ghidată (respirație, body scan, meditație) + aplicare în viața reală",
-      "observare non-judicativă",
-      "rutine scurte zilnice (5–15 min)",
+      "guided practices (breath, body scan, meditation) + real-life application",
+      "non-judgmental awareness",
+      "short daily routines (5–15 minutes) when possible",
     ],
     goodIf: [
-      "simți că mintea fuge constant",
-      "vrei instrumente de autoreglare",
-      "ai stres ridicat și nevoie de ancorare",
+      "your mind never slows down",
+      "you want self-regulation tools",
+      "you’re highly stressed and need grounding",
     ],
     whatToAsk: [
-      "Ce practici folosiți și ce recomandări de rutină aveți?",
-      "Cum integrați mindfulness în situații reale (panică, conflict)?",
-      "E potrivit pentru mine dacă am traumă/flashback-uri? (important!)",
+      "What practices do you use and what daily routine do you recommend?",
+      "How do we use mindfulness in real situations (panic, conflict)?",
+      "Is it appropriate for me if I have trauma/flashbacks? (important)",
     ],
     notes: [
-      "Pentru unele persoane cu traumă severă, mindfulness poate necesita adaptare și stabilizare înainte.",
+      "For some people with severe trauma, mindfulness needs careful adaptation and stabilization first.",
     ],
   },
   {
     id: "Gestalt",
     name: "Gestalt Therapy",
     short:
-      "Accent pe conștientizare, experiență în prezent și responsabilitate personală; lucrează mult cu emoțiile în „aici și acum”.",
+      "Focuses on awareness, present-moment experience, and personal responsibility—often working deeply with emotions in the ‘here and now’.",
     for: [
-      "claritate emoțională",
-      "blocaje, decizii",
-      "relații și limite",
-      "autenticitate și stimă de sine",
-      "anxietate/stres (în funcție de terapeut)",
+      "emotional clarity",
+      "life decisions and feeling stuck",
+      "relationships and boundaries",
+      "authenticity and self-esteem",
+      "stress/anxiety (depending on therapist training)",
     ],
     howItWorks: [
-      "exerciții experiențiale (dialog, scaunul gol) când e potrivit",
-      "observi ce se întâmplă în corp, emoții, impulsuri",
-      "identifici nevoi și înveți să le exprimi sănătos",
+      "experiential techniques (dialogue, empty chair) when appropriate",
+      "notice what’s happening in the body, emotions, impulses",
+      "identify needs and practice expressing them in healthier ways",
     ],
     goodIf: [
-      "vrei să simți și să înțelegi emoțiile, nu doar să le analizezi",
-      "îți place lucru experiențial, creativ",
-      "ai dificultăți cu limite și exprimare",
+      "you want to feel and understand emotions—not only analyze them",
+      "you like experiential and creative work",
+      "you struggle with boundaries and expression",
     ],
     whatToAsk: [
-      "Folosiți tehnici experiențiale? Cum decideți când?",
-      "Cum lucrăm cu emoții intense în siguranță?",
-      "Cum conectăm insight-ul cu schimbări concrete?",
+      "Do you use experiential techniques? How do you decide when?",
+      "How do we work safely with intense emotions?",
+      "How do we translate insight into real-life change?",
     ],
   },
   {
     id: "DBT",
     name: "DBT (Dialectical Behavior Therapy)",
     short:
-      "Terapie foarte structurată pentru reglare emoțională, toleranță la distres, relații și mindfulness; foarte practică.",
+      "A highly structured, skills-based therapy for emotion regulation, distress tolerance, relationships, and mindfulness—very practical.",
     for: [
-      "reglare emoțională dificilă",
-      "impulsivitate",
-      "auto-vătămare / idei suicidare (în cadre clinice specializate)",
-      "BPD (în multe ghiduri e standard)",
-      "crize frecvente, conflict relațional",
+      "emotion dysregulation",
+      "impulsivity",
+      "self-harm / suicidal ideation (in specialized settings)",
+      "BPD (commonly recommended in guidelines)",
+      "frequent crises and intense relationship conflict",
     ],
     howItWorks: [
-      "abilități în module: mindfulness, distres tolerance, emotion regulation, interpersonal effectiveness",
-      "planuri concrete pentru crize",
-      "uneori include grup de abilități (depinde de setare)",
+      "skills modules: mindfulness, distress tolerance, emotion regulation, interpersonal effectiveness",
+      "concrete crisis plans",
+      "sometimes includes skills group (depends on provider)",
     ],
     goodIf: [
-      "ai nevoie de structură și instrumente rapide",
-      "te confrunți cu emoții intense sau crize",
-      "vrei să înveți abilități relaționale",
+      "you need structure and fast-acting tools",
+      "you deal with intense emotions or frequent crises",
+      "you want stronger relationship skills",
     ],
     whatToAsk: [
-      "Oferiți DBT complet (terapie + skills) sau integrat parțial?",
-      "Cum arată planul de siguranță în crize?",
-      "Ce abilități exersăm între ședințe?",
+      "Do you offer full DBT (therapy + skills) or only DBT-informed work?",
+      "How do you plan for safety during crises?",
+      "What skills do we practice between sessions?",
     ],
     notes: [
-      "Dacă există risc de auto-vătămare/suicid, e importantă direcționarea către servicii specializate.",
+      "If there is risk of self-harm or suicide, specialized clinical support is essential.",
     ],
   },
   {
     id: "EMDR",
     name: "EMDR (Eye Movement Desensitization and Reprocessing)",
     short:
-      "Abordare pentru procesarea amintirilor traumatice folosind stimulare bilaterală (ex. mișcări oculare), după stabilizare.",
+      "A trauma-focused method that processes painful memories using bilateral stimulation (e.g., eye movements), after careful stabilization.",
     for: [
-      "PTSD / traumă",
-      "evenimente traumatice (accidente, agresiuni, pierderi)",
-      "traumă complexă (cu adaptări, etapizat)",
-      "anxietate legată de evenimente specifice",
+      "PTSD / trauma",
+      "single-event trauma (accidents, assaults, losses)",
+      "complex trauma (with adaptations, step-by-step)",
+      "anxiety linked to specific memories/triggers",
     ],
     howItWorks: [
-      "stabilizare și resurse (siguranță) înainte de procesare",
-      "identificare ținte (amintiri, declanșatori, credințe negative)",
-      "reprocesare cu stimulare bilaterală + integrare",
+      "stabilization and resourcing (safety) before processing",
+      "identify targets (memories, triggers, negative beliefs)",
+      "reprocessing + integration",
     ],
     goodIf: [
-      "ai flashback-uri, triggeri sau amintiri intruzive",
-      "simți că „știu logic, dar corpul nu se calmează”",
-      "vrei procesare focalizată pe traumă",
+      "you have intrusive memories, flashbacks, or strong triggers",
+      "you feel: “I understand logically, but my body won’t calm down”",
+      "you want focused trauma processing",
     ],
     whatToAsk: [
-      "Sunteți formați/atestați în EMDR? Ce nivel?",
-      "Cum faceți stabilizarea înainte de procesare?",
-      "Cum gestionați dissocierea sau copleșirea în ședințe?",
+      "Are you formally trained/certified in EMDR? What level?",
+      "How do you do stabilization before processing?",
+      "How do you manage dissociation or overwhelm in sessions?",
     ],
     notes: [
-      "EMDR e recomandat să fie făcut de terapeuți formați specific; stabilizarea e esențială.",
+      "EMDR should be provided by specifically trained therapists; stabilization is key.",
     ],
   },
 ];
@@ -353,8 +353,8 @@ export default function TherapyTypesPage() {
           <div>
             <h1 className="text-3xl font-bold">Type of Therapy</h1>
             <p className="text-gray-600 mt-2">
-              A quick, human explanation of the main therapy approaches. Use this to choose
-              a therapist with more confidence.
+              A simple, human explanation of the main therapy approaches. Use this to choose a therapist
+              with more confidence.
             </p>
           </div>
 
@@ -373,16 +373,13 @@ export default function TherapyTypesPage() {
 }
 
 function TherapyGuide() {
-  // client-like behavior without "use client": keep it static.
-  // If you want filters/search interactive, move this component to a separate "use client" file.
-  // For now, show all therapies expanded & readable.
-
+  // Static page (server component). If you want interactive search/filters, move to a separate "use client" file.
   return (
     <div className="mt-8 space-y-6">
       <div className="bg-white border rounded-2xl p-5">
         <h2 className="text-lg font-semibold">Therapy approaches</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Methods therapists can specialize in (the same ones you see in profiles).
+          Methods therapists can specialize in (the same ones you’ll see in their profiles).
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -444,8 +441,8 @@ function TherapyGuide() {
       <div className="bg-white border rounded-2xl p-6">
         <h2 className="text-lg font-semibold">Not sure what to pick?</h2>
         <p className="text-gray-600 mt-2">
-          If you’re unsure, that’s normal. Many people start with an integrative therapist,
-          then refine preferences after 1–2 sessions.
+          If you’re unsure, that’s normal. Many people start with an integrative therapist and refine
+          preferences after 1–2 sessions.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -499,4 +496,4 @@ function Pills({ items }: { items: string[] }) {
       ))}
     </div>
   );
-}   
+}

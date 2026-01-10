@@ -80,6 +80,16 @@ export default function DashboardPage() {
               Learn about CBT, Gestalt, ACT, Psychodynamic and more.
           </div>
           </button>
+
+          <button
+            onClick={() => router.push("/problems")}
+            className="bg-white border rounded-2xl p-5 text-left hover:shadow-sm transition"
+        >
+            <div className="text-lg font-semibold">Problems we help with</div>
+            <div className="text-sm text-gray-600 mt-1">
+                Anxiety, depression, panic attacks, burnout, identity issues and more.
+            </div>
+        </button>
         </div>
 
         {/* BOOKINGS CALENDAR */}
