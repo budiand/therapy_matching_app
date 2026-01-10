@@ -204,7 +204,7 @@ export default function TherapistAppointmentsPage() {
 
                                         <div className="col-span-12 md:col-span-2 flex md:justify-end gap-2">
                                             <Link
-                                                href={`/therapists/dashboard/users/${a.clientId}`}
+                                                href={`/therapists/dashboard/clients/${a.clientId}`}
                                                 className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm"
                                             >
                                                 Open client
