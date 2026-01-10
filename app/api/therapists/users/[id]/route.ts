@@ -3,16 +3,13 @@ import { cookies } from "next/headers";
 import mongoose from "mongoose";
 import connectMongo from "@/db/mongoose";
 import User from "@/models/User";
-import Booking from "@/models/Booking";
+import Appointment from "@/models/Appointment";
 
 function getTherapistIdFromCookie() {
     return cookies().get("tm_tid")?.value || null;
 }
 
-export async function GET(
-    _req: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
     try {
         await connectMongo();
 
@@ -22,12 +19,13 @@ export async function GET(
         }
 
         const userId = params?.id;
+
         if (!mongoose.Types.ObjectId.isValid(tid) || !mongoose.Types.ObjectId.isValid(userId)) {
             return NextResponse.json({ error: "Invalid id" }, { status: 400 });
         }
 
-        // ✅ SECURITY: userul trebuie să fie "al" terapeutului (prin Booking)
-        const hasRelation = await Booking.exists({
+        // ✅ SECURITY: userul trebuie să aibă cel puțin o programare cu terapeutul (Appointment)
+        const hasRelation = await Appointment.exists({
             therapistId: tid,
             userId: userId,
         });
@@ -44,17 +42,17 @@ export async function GET(
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         }
 
-        // Optional: aducem și ultima ședință (din bookings)
-        const lastBooking = await Booking.findOne({ therapistId: tid, userId })
+        // ✅ ultima ședință (din appointments)
+        const lastAppt = await Appointment.findOne({ therapistId: tid, userId })
             .sort({ dateISO: -1, createdAt: -1 })
             .select("dateISO createdAt")
             .lean();
 
         const lastSessionISO =
-            (lastBooking as any)?.dateISO
-                ? new Date((lastBooking as any).dateISO).toISOString()
-                : (lastBooking as any)?.createdAt
-                    ? new Date((lastBooking as any).createdAt).toISOString()
+            (lastAppt as any)?.dateISO
+                ? new Date((lastAppt as any).dateISO).toISOString()
+                : (lastAppt as any)?.createdAt
+                    ? new Date((lastAppt as any).createdAt).toISOString()
                     : null;
 
         return NextResponse.json(
@@ -71,7 +69,7 @@ export async function GET(
                     updatedAt: (user as any).updatedAt,
                 },
             },
-            { status: 200 }
+            { status: 200, headers: { "Cache-Control": "no-store" } }
         );
     } catch (e) {
         console.error("THERAPIST USER GET ERROR:", e);

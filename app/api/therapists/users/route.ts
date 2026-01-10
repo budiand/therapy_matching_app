@@ -1,9 +1,11 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
 import connectMongo from "@/db/mongoose";
 import User from "@/models/User";
-import Booking from "@/models/Booking";
+import Appointment from "@/models/Appointment";
 
 function getTherapistIdFromCookie() {
     return cookies().get("tm_tid")?.value || null;
@@ -17,20 +19,20 @@ export async function GET() {
         if (!tid) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
-
         if (!mongoose.Types.ObjectId.isValid(tid)) {
             return NextResponse.json({ error: "Invalid therapist id" }, { status: 400 });
         }
 
-        // 1) Luăm toate bookings ale terapeutului -> extragem userId distinct
-        const bookings = await Booking.find({ therapistId: tid })
+        // 1) toate appointments ale terapeutului (doar ce ne trebuie)
+        const appts = await Appointment.find({ therapistId: tid })
             .select("userId dateISO createdAt")
             .lean();
 
-        const mapLastSession = new Map<string, string>(); // userId -> lastSessionISO
-        for (const b of bookings) {
-            const uid = String((b as any).userId);
-            const when = (b as any).dateISO || (b as any).createdAt;
+        // 2) map userId -> lastSessionISO
+        const mapLastSession = new Map<string, string>();
+        for (const a of appts as any[]) {
+            const uid = String(a.userId);
+            const when = a.dateISO || a.createdAt;
             const iso = when ? new Date(when).toISOString() : null;
             if (!iso) continue;
 
@@ -42,17 +44,20 @@ export async function GET() {
 
         const userIds = Array.from(mapLastSession.keys());
         if (userIds.length === 0) {
-            return NextResponse.json({ ok: true, users: [] }, { status: 200 });
+            return NextResponse.json(
+                { ok: true, users: [] },
+                { status: 200, headers: { "Cache-Control": "no-store" } }
+            );
         }
 
-        // 2) Fetch users reali (fără passwordHash)
+        // 3) fetch users (fără passwordHash)
         const users = await User.find({ _id: { $in: userIds } })
             .select("name email phone age createdAt updatedAt")
             .lean();
 
-        // 3) Atașăm lastSessionISO în răspuns + sortăm
-        const out = users
-            .map((u: any) => ({
+        // 4) attach lastSessionISO + sort
+        const out = (users as any[])
+            .map((u) => ({
                 id: String(u._id),
                 name: u.name,
                 email: u.email,
@@ -65,10 +70,13 @@ export async function GET() {
             .sort((a, b) => {
                 const at = a.lastSessionISO ? new Date(a.lastSessionISO).getTime() : 0;
                 const bt = b.lastSessionISO ? new Date(b.lastSessionISO).getTime() : 0;
-                return bt - at; // cei mai recenți sus
+                return bt - at;
             });
 
-        return NextResponse.json({ ok: true, users: out }, { status: 200 });
+        return NextResponse.json(
+            { ok: true, users: out },
+            { status: 200, headers: { "Cache-Control": "no-store" } }
+        );
     } catch (e) {
         console.error("THERAPIST USERS GET ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

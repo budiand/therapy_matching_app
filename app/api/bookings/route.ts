@@ -22,8 +22,8 @@ export async function GET() {
       return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
     }
 
-    // ✅ FIX: Appointment has clientId (not userId)
-    const appts = await Appointment.find({ clientId: uid })
+    // ✅ FIX: Appointment uses userId
+    const appts = await Appointment.find({ userId: uid })
         .sort({ dateISO: 1 })
         .lean();
 
@@ -91,10 +91,10 @@ export async function POST(req: Request) {
 
     const durationMin = Number(body?.durationMin ?? 50);
 
-    // ✅ FIX: save as clientId, because schema is clientId
+    // ✅ FIX: save as userId
     const created = await Appointment.create({
       therapistId,
-      clientId: uid,
+      userId: uid,
       dateISO: dt,
       durationMin,
       location,
