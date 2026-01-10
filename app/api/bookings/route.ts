@@ -1,46 +1,22 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import mongoose from "mongoose";
-import connectMongo from "@/db/mongoose";
 import Booking from "@/models/Booking";
+import connectMongo from "@/db/mongoose";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   await connectMongo();
+  const body = await req.json();
 
   const userId = cookies().get("tm_uid")?.value;
 
-  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { therapistName, start, end } = await req.json();
-
-  if (!therapistName || !start || !end) {
-    return NextResponse.json({ error: "Missing data" }, { status: 400 });
-  }
-
-  const booking = await Booking.create({
-    userId: new mongoose.Types.ObjectId(userId),
-    therapistName,
-    start: new Date(start),
-    end: new Date(end),
+  await Booking.create({
+    therapistId: body.therapistId,
+    clientId: userId,
+    dateISO: new Date(),
+    durationMin: 50,
+    location: body.location,
+    status: "scheduled"
   });
 
-  return NextResponse.json(booking, { status: 201 });
-}
-
-export async function GET() {
-  await connectMongo();
-
-  const userId = cookies().get("tm_uid")?.value;
-
-  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-    return NextResponse.json([]);
-  }
-
-  const bookings = await Booking.find({
-    userId: new mongoose.Types.ObjectId(userId),
-  }).sort({ start: 1 });
-
-  return NextResponse.json(bookings);
+  return NextResponse.json({ ok: true });
 }
