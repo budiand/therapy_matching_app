@@ -21,7 +21,7 @@ export async function GET() {
             return NextResponse.json({ error: "Invalid therapist id" }, { status: 400 });
         }
 
-        // 1) All appointments of this therapist
+        // 1) all appointments for this therapist
         const appts = await Appointment.find({ therapistId: tid })
             .select("userId dateISO createdAt")
             .lean();
@@ -29,9 +29,11 @@ export async function GET() {
         // 2) compute lastSessionISO per userId
         const lastMap = new Map<string, string>();
         for (const a of appts) {
-            const uid = String((a as any).userId);
+            const uid = String((a as any).userId || "");
+            if (!mongoose.Types.ObjectId.isValid(uid)) continue;
+
             const when = (a as any).dateISO || (a as any).createdAt;
-            if (!uid || !when) continue;
+            if (!when) continue;
 
             const iso = new Date(when).toISOString();
             const prev = lastMap.get(uid);
@@ -41,17 +43,20 @@ export async function GET() {
             }
         }
 
-        const userIds = Array.from(lastMap.keys()).filter((id) => mongoose.Types.ObjectId.isValid(id));
+        const userIds = Array.from(lastMap.keys());
         if (userIds.length === 0) {
-            return NextResponse.json({ ok: true, users: [] }, { status: 200, headers: { "Cache-Control": "no-store" } });
+            return NextResponse.json(
+                { ok: true, clients: [] },
+                { status: 200, headers: { "Cache-Control": "no-store" } }
+            );
         }
 
-        // 3) Fetch users
+        // 3) load users
         const users = await User.find({ _id: { $in: userIds } })
             .select("name email phone age createdAt updatedAt")
             .lean();
 
-        // 4) Output sorted by lastSession
+        // 4) response
         const out = users
             .map((u: any) => ({
                 id: String(u._id),
@@ -71,11 +76,11 @@ export async function GET() {
             });
 
         return NextResponse.json(
-            { ok: true, users: out },
+            { ok: true, clients: out },
             { status: 200, headers: { "Cache-Control": "no-store" } }
         );
     } catch (e) {
-        console.error("THERAPIST USERS GET ERROR:", e);
+        console.error("THERAPIST CLIENTS GET ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

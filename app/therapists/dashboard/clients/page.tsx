@@ -47,7 +47,7 @@ export default function TherapistClientsPage() {
             setLoading(true);
             setError("");
             try {
-                const res = await fetch("/api/therapists/users", { method: "GET" });
+                const res = await fetch("/api/therapists/clients", { method: "GET" });
                 const data = await res.json().catch(() => null);
                 if (!res.ok) throw new Error(data?.error || `Failed to load users (${res.status}).`);
 

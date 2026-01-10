@@ -75,7 +75,7 @@ export default function TherapistDashboardPage() {
 
             try {
                 // 1) Users (clients list for therapist)
-                const usersRes = await fetch("/api/therapists/users", { method: "GET" });
+                const usersRes = await fetch("/api/therapists/clients", { method: "GET" });
                 const usersJson = await usersRes.json().catch(() => null);
                 if (!usersRes.ok) {
                     throw new Error(usersJson?.error || `Failed to load users (${usersRes.status}).`);

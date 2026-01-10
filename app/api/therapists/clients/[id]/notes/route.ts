@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
@@ -7,36 +5,38 @@ import connectMongo from "@/db/mongoose";
 import Appointment from "@/models/Appointment";
 import UserNote from "@/models/UserNote";
 
+export const dynamic = "force-dynamic";
+
 function getTherapistIdFromCookie() {
     return cookies().get("tm_tid")?.value || null;
 }
 
-async function assertRelationOr404(tid: string, userId: string) {
-    if (!mongoose.Types.ObjectId.isValid(tid) || !mongoose.Types.ObjectId.isValid(userId)) {
+async function assertAccess(tid: string, clientId: string) {
+    if (!mongoose.Types.ObjectId.isValid(tid) || !mongoose.Types.ObjectId.isValid(clientId)) {
         return { ok: false as const, res: NextResponse.json({ error: "Invalid id" }, { status: 400 }) };
     }
 
-    const hasRelation = await Appointment.exists({ therapistId: tid, userId });
+    const hasRelation = await Appointment.exists({ therapistId: tid, userId: clientId });
     if (!hasRelation) {
-        return { ok: false as const, res: NextResponse.json({ error: "Not found" }, { status: 404 }) };
+        return { ok: false as const, res: NextResponse.json({ error: "Client not found" }, { status: 404 }) };
     }
 
     return { ok: true as const };
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, { params }: { params: { id: string } }) {
     try {
         await connectMongo();
 
         const tid = getTherapistIdFromCookie();
         if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-        const userId = params?.id;
+        const clientId = params.id;
 
-        const guard = await assertRelationOr404(tid, userId);
-        if (!guard.ok) return guard.res;
+        const access = await assertAccess(tid, clientId);
+        if (!access.ok) return access.res;
 
-        const notes = await UserNote.find({ therapistId: tid, userId })
+        const notes = await UserNote.find({ therapistId: tid, userId: clientId })
             .sort({ createdAt: -1 })
             .lean();
 
@@ -54,7 +54,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
             { status: 200, headers: { "Cache-Control": "no-store" } }
         );
     } catch (e) {
-        console.error("USER NOTES GET ERROR:", e);
+        console.error("CLIENT NOTES GET ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
@@ -66,10 +66,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         const tid = getTherapistIdFromCookie();
         if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-        const userId = params?.id;
+        const clientId = params.id;
 
-        const guard = await assertRelationOr404(tid, userId);
-        if (!guard.ok) return guard.res;
+        const access = await assertAccess(tid, clientId);
+        if (!access.ok) return access.res;
 
         const body = await req.json().catch(() => ({}));
         const title = typeof body?.title === "string" ? body.title.trim() : "";
@@ -84,7 +84,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
         const created = await UserNote.create({
             therapistId: tid,
-            userId,
+            userId: clientId,
             title: title || undefined,
             content,
             tags,
@@ -104,7 +104,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             { status: 201, headers: { "Cache-Control": "no-store" } }
         );
     } catch (e) {
-        console.error("USER NOTES POST ERROR:", e);
+        console.error("CLIENT NOTES POST ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
@@ -116,24 +116,21 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         const tid = getTherapistIdFromCookie();
         if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-        const userId = params?.id;
+        const clientId = params.id;
 
-        const guard = await assertRelationOr404(tid, userId);
-        if (!guard.ok) return guard.res;
+        const access = await assertAccess(tid, clientId);
+        if (!access.ok) return access.res;
 
         const { searchParams } = new URL(req.url);
         const noteId = searchParams.get("noteId");
         if (!noteId) return NextResponse.json({ error: "Missing noteId" }, { status: 400 });
-        if (!mongoose.Types.ObjectId.isValid(noteId)) {
-            return NextResponse.json({ error: "Invalid noteId" }, { status: 400 });
-        }
 
-        const deleted = await UserNote.deleteOne({ _id: noteId, therapistId: tid, userId });
+        const deleted = await UserNote.deleteOne({ _id: noteId, therapistId: tid, userId: clientId });
         if (!deleted.deletedCount) return NextResponse.json({ error: "Note not found" }, { status: 404 });
 
         return NextResponse.json({ ok: true }, { status: 200, headers: { "Cache-Control": "no-store" } });
     } catch (e) {
-        console.error("USER NOTES DELETE ERROR:", e);
+        console.error("CLIENT NOTES DELETE ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
