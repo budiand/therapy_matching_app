@@ -9,20 +9,26 @@ type Therapist = {
   name: string;
   city: string;
   online: boolean;
+
   priceRange?: string;
   description?: string;
-  specialization?: string; // în modelul tău existent
-  approaches?: string[];   // dacă ai adăugat în model
+
+  // în schema ta mare ai:
+  specializations?: string[];
+  approaches?: string[];
+
+  // în unele coduri vechi ai:
+  specialization?: string;
 };
 
 const ISSUES = [
   { value: "", label: "All topics" },
-  { value: "anxiety", label: "Anxiety" },
-  { value: "depression", label: "Depression" },
-  { value: "burnout", label: "Burnout" },
-  { value: "relationships", label: "Relationships" },
-  { value: "family", label: "Family" },
-  { value: "lgbtq", label: "LGBTQ+" },
+  { value: "Anxiety", label: "Anxiety" },
+  { value: "Depression", label: "Depression" },
+  { value: "Burnout", label: "Burnout" },
+  { value: "Relationships", label: "Relationships" },
+  { value: "Family", label: "Family" },
+  { value: "LGBTQ+", label: "LGBTQ+" },
 ];
 
 const APPROACHES = [
@@ -30,8 +36,10 @@ const APPROACHES = [
   { value: "CBT", label: "CBT" },
   { value: "Psychodynamic", label: "Psychodynamic" },
   { value: "ACT", label: "ACT" },
-  { value: "Schema", label: "Schema therapy" },
+  { value: "Schema therapy", label: "Schema therapy" },
   { value: "Gestalt", label: "Gestalt" },
+  { value: "DBT", label: "DBT" },
+  { value: "EMDR", label: "EMDR" },
 ];
 
 const PRICE = [
@@ -45,54 +53,8 @@ function cn(...x: Array<string | false | undefined>) {
   return x.filter(Boolean).join(" ");
 }
 
-function getMockSlots() {
-  // MVP: ore mock (poți înlocui cu API real)
-  const base = new Date();
-  const slots: { label: string; iso: string }[] = [];
-  for (let d = 0; d < 5; d++) {
-    for (const hour of [10, 12, 15, 18]) {
-      const dt = new Date(base);
-      dt.setDate(base.getDate() + d);
-      dt.setHours(hour, 0, 0, 0);
-      slots.push({
-        label: dt.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-        iso: dt.toISOString(),
-      });
-    }
-  }
-  return slots;
-}
-
-function Modal({
-                 open,
-                 title,
-                 children,
-                 onClose,
-               }: {
-  open: boolean;
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  if (!open) return null;
-  return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-        <div className="relative w-full max-w-lg rounded-2xl bg-white border shadow-xl p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="text-lg font-semibold">{title}</div>
-            <button
-                onClick={onClose}
-                className="px-2 py-1 rounded-lg border bg-white hover:bg-gray-50"
-                aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="mt-4">{children}</div>
-        </div>
-      </div>
-  );
+function norm(s?: string) {
+  return (s || "").toLowerCase().trim();
 }
 
 export default function TherapistsClient() {
@@ -112,44 +74,6 @@ export default function TherapistsClient() {
   const [items, setItems] = useState<Therapist[]>([]);
   const [error, setError] = useState("");
 
-  // booking modal
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingTherapist, setBookingTherapist] = useState<Therapist | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<string>("");
-
-  const slots = useMemo(() => getMockSlots(), []);
-  const filteredLocal = useMemo(() => {
-    // additional local filters for q/approach/price (since API route currently supports city/online/issue)
-    let arr = [...items];
-
-    if (q.trim()) {
-      const qq = q.toLowerCase();
-      arr = arr.filter((t) =>
-          (t.name || "").toLowerCase().includes(qq) ||
-          (t.description || "").toLowerCase().includes(qq) ||
-          (t.specialization || "").toLowerCase().includes(qq)
-      );
-    }
-
-    if (approach) {
-      const a = approach.toLowerCase();
-      arr = arr.filter((t) => (t.approaches || []).some((x) => x.toLowerCase().includes(a)));
-    }
-
-    if (price) {
-      // MVP: priceRange e string ("low/medium/high" sau "100-150" etc.)
-      arr = arr.filter((t) => (t.priceRange || "").toLowerCase().includes(price.toLowerCase()));
-    }
-
-    if (sort === "name") {
-      arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    } else {
-      // newest: dacă backend trimite createdAt, ar trebui să fie deja sortat; păstrăm ordinea
-    }
-
-    return arr;
-  }, [items, q, approach, price, sort]);
-
   async function load() {
     setLoading(true);
     setError("");
@@ -157,18 +81,21 @@ export default function TherapistsClient() {
     try {
       const params = new URLSearchParams();
       if (city.trim()) params.set("city", city.trim());
-      params.set("online", String(onlineOnly));
-      if (issue) params.set("issue", issue);
+      params.set("online", String(onlineOnly)); // backend-ul tău suportă online
+      if (issue) params.set("issue", issue); // backend: issue -> specialization (regex)
 
       const res = await fetch(`/api/therapists?${params.toString()}`, { cache: "no-store" });
+      const data = await res.json().catch(() => null);
+
       if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || "Failed to load therapists");
+        throw new Error(data?.error || `Failed to load therapists (${res.status})`);
       }
-      const data = (await res.json()) as Therapist[];
-      setItems(data);
+
+      // backend-ul tău returnează array direct
+      setItems(Array.isArray(data) ? (data as Therapist[]) : []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -179,9 +106,50 @@ export default function TherapistsClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function applyFilters() {
-    load();
-  }
+  const filteredLocal = useMemo(() => {
+    let arr = [...items];
+
+    // q search
+    if (q.trim()) {
+      const qq = norm(q);
+      arr = arr.filter((t) => {
+        const hay = [
+          t.name,
+          t.city,
+          t.description,
+          t.priceRange,
+          t.specialization,
+          ...(t.specializations || []),
+          ...(t.approaches || []),
+        ]
+            .filter(Boolean)
+            .map(String)
+            .map(norm)
+            .join(" | ");
+
+        return hay.includes(qq);
+      });
+    }
+
+    // approach filter
+    if (approach) {
+      const a = norm(approach);
+      arr = arr.filter((t) => (t.approaches || []).some((x) => norm(x).includes(a)));
+    }
+
+    // price filter (MVP: string contains)
+    if (price) {
+      const p = norm(price);
+      arr = arr.filter((t) => norm(t.priceRange).includes(p));
+    }
+
+    // sort
+    if (sort === "name") {
+      arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }
+
+    return arr;
+  }, [items, q, approach, price, sort]);
 
   function resetFilters() {
     setCity("");
@@ -191,62 +159,27 @@ export default function TherapistsClient() {
     setPrice("");
     setQ("");
     setSort("newest");
-    // reload after reset
     setTimeout(() => load(), 0);
   }
 
-  function openBooking(t: Therapist) {
-    setBookingTherapist(t);
-    setSelectedSlot("");
-    setBookingOpen(true);
+  function viewProfile(t: Therapist) {
+    router.push(`/therapists/${t._id}`);
   }
 
-  async function confirmBooking() {
-    if (!bookingTherapist || !selectedSlot) {
-      alert("Select a slot first.");
-      return;
-    }
-
-    // durata ședinței – MVP: 50 minute
-    const start = new Date(selectedSlot);
-    const end = new Date(start);
-    end.setMinutes(end.getMinutes() + 50);
-
-    try {
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          therapistName: bookingTherapist.name,
-          start: start.toISOString(),
-          end: end.toISOString(),
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Booking failed");
-      }
-
-      alert("Session booked successfully!");
-      setBookingOpen(false);
-
-      // opțional: redirect către dashboard
-      // router.push("/dashboard");
-    } catch (e) {
-      alert("Could not book session. Please try again.");
-    }
+  function bookSession(t: Therapist) {
+    // booking-ul REAL îl faci în /book/[id]
+    router.push(`/book/${t._id}`);
   }
-
 
   return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 py-8">
-          {/* Top nav */}
+          {/* Top header */}
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">Explore therapists</h1>
               <p className="text-gray-600 mt-2">
-                Filter by city, availability, and topic. Then view profiles or book a session.
+                Filter by city, availability format and topic. Then view profiles or book a session.
               </p>
             </div>
 
@@ -257,6 +190,7 @@ export default function TherapistsClient() {
               >
                 Dashboard
               </button>
+
               <button
                   className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
                   onClick={() => router.push("/onboarding")}
@@ -275,7 +209,7 @@ export default function TherapistsClient() {
                     className="mt-1 w-full border rounded-lg p-2"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Name, specialization, description..."
+                    placeholder="Name, topic, approach, description..."
                 />
               </div>
 
@@ -360,9 +294,10 @@ export default function TherapistsClient() {
                   >
                     Reset
                   </button>
+
                   <button
                       className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                      onClick={applyFilters}
+                      onClick={load}
                   >
                     Apply filters
                   </button>
@@ -396,7 +331,7 @@ export default function TherapistsClient() {
                           <div>
                             <h3 className="text-lg font-semibold">{t.name}</h3>
                             <p className="text-sm text-gray-600 mt-1">
-                              {t.city} • {t.online ? "Online" : "In-person"}
+                              {t.city} • {t.online ? "Online available" : "In-person only"}
                               {t.priceRange ? ` • ${t.priceRange}` : ""}
                             </p>
                           </div>
@@ -409,18 +344,14 @@ export default function TherapistsClient() {
                                       : "bg-gray-50 text-gray-700 border-gray-200"
                               )}
                           >
-                      {t.specialization || "Therapist"}
+                      {t.specialization || (t.specializations?.[0] ?? "Therapist")}
                     </span>
                         </div>
 
                         {t.description ? (
-                            <p className="text-sm text-gray-700 mt-3 line-clamp-3">
-                              {t.description}
-                            </p>
+                            <p className="text-sm text-gray-700 mt-3 line-clamp-3">{t.description}</p>
                         ) : (
-                            <p className="text-sm text-gray-500 mt-3">
-                              No description provided.
-                            </p>
+                            <p className="text-sm text-gray-500 mt-3">No description provided.</p>
                         )}
 
                         {t.approaches?.length ? (
@@ -434,14 +365,14 @@ export default function TherapistsClient() {
                         <div className="mt-5 flex gap-2">
                           <button
                               className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
-                              onClick={() => router.push(`/therapists/${t._id}`)}
+                              onClick={() => viewProfile(t)}
                           >
                             View profile
                           </button>
 
                           <button
                               className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                              onClick={() => openBooking(t)}
+                              onClick={() => bookSession(t)}
                           >
                             Book session
                           </button>
@@ -451,55 +382,11 @@ export default function TherapistsClient() {
                 </div>
             )}
           </div>
-        </div>
 
-        {/* Booking modal */}
-        <Modal
-            open={bookingOpen}
-            title={bookingTherapist ? `Book with ${bookingTherapist.name}` : "Book a session"}
-            onClose={() => setBookingOpen(false)}
-        >
-          <p className="text-sm text-gray-600">
-            Select an available time slot (mock for now).
+          <p className="text-xs text-gray-500 mt-6">
+            Booking opens the therapist-specific booking page: <span className="font-mono">/book/[id]</span>
           </p>
-
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {slots.map((s) => {
-              const active = selectedSlot === s.iso;
-              return (
-                  <button
-                      key={s.iso}
-                      type="button"
-                      onClick={() => setSelectedSlot(s.iso)}
-                      className={cn(
-                          "px-3 py-2 rounded-xl border text-sm text-left",
-                          active
-                              ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                              : "border-gray-200 hover:bg-gray-50"
-                      )}
-                  >
-                    {s.label}
-                  </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 flex justify-end gap-2">
-            <button
-                className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
-                onClick={() => setBookingOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
-                disabled={!selectedSlot}
-                onClick={confirmBooking}
-            >
-              Confirm booking
-            </button>
-          </div>
-        </Modal>
+        </div>
       </div>
   );
 }
