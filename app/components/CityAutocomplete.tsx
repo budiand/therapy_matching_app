@@ -2,96 +2,74 @@
 
 import { useEffect, useState } from "react";
 
-type CityAutocompleteProps = {
-  value: string;
-  onChange: (value: string) => void;
-};
-
 export default function CityAutocomplete({
-                                           value,
-                                           onChange,
-                                         }: CityAutocompleteProps) {
-  const [cities, setCities] = useState<string[]>([]);
-  const [filteredCities, setFilteredCities] = useState<string[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+}) {
+    const [query, setQuery] = useState(value);
+    const [items, setItems] = useState<string[]>([]);
+    const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadCities() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/therapists/cities");
-        const data = (await res.json()) as string[];
-        setCities(data);
-      } catch (err) {
-        console.error("Failed to load cities", err);
-      } finally {
-        setLoading(false);
-      }
-    }
+    useEffect(() => {
+        setQuery(value);
+    }, [value]);
 
-    loadCities();
-  }, []);
+    useEffect(() => {
+        if (!query.trim()) {
+            setItems([]);
+            return;
+        }
 
-  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const inputValue = e.target.value;
-    onChange(inputValue);
+        const ctrl = new AbortController();
 
-    if (!inputValue.trim()) {
-      setFilteredCities([]);
-      setIsOpen(false);
-      return;
-    }
+        fetch(`/api/cities?q=${encodeURIComponent(query)}`, {
+            signal: ctrl.signal,
+            cache: "no-store",
+        })
+            .then((r) => r.json())
+            .then((data) => {
+                if (Array.isArray(data)) setItems(data);
+            })
+            .catch(() => {});
 
-    const matches = cities.filter((city) =>
-        city.toLowerCase().includes(inputValue.toLowerCase())
+        return () => ctrl.abort();
+    }, [query]);
+
+    return (
+        <div className="relative">
+            <input
+                className="w-full border rounded-lg p-2"
+                value={query}
+                onChange={(e) => {
+                    setQuery(e.target.value);
+                    onChange(e.target.value);
+                    setOpen(true);
+                }}
+                onFocus={() => setOpen(true)}
+                placeholder="Type a city..."
+            />
+
+            {open && items.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow">
+                    {items.map((c) => (
+                        <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                                onChange(c);
+                                setQuery(c);
+                                setOpen(false);
+                            }}
+                            className="block w-full text-left px-3 py-2 hover:bg-gray-50 text-sm"
+                        >
+                            {c}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
     );
-
-    setFilteredCities(matches.slice(0, 20)); // limit results
-    setIsOpen(true);
-  }
-
-  function handleSelect(city: string) {
-    onChange(city);
-    setIsOpen(false);
-  }
-
-  function handleBlur() {
-    // Delay to allow click on dropdown item
-    setTimeout(() => setIsOpen(false), 150);
-  }
-
-  return (
-      <div className="relative">
-        <input
-            type="text"
-            value={value}
-            onChange={handleInputChange}
-            onBlur={handleBlur}
-            placeholder={loading ? "Loading cities..." : "Start typing your city"}
-            className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            autoComplete="off"
-        />
-
-        {isOpen && filteredCities.length > 0 && (
-            <ul className="absolute z-20 mt-1 w-full max-h-48 overflow-auto rounded-lg border bg-white shadow-lg">
-              {filteredCities.map((city) => (
-                  <li
-                      key={city}
-                      onMouseDown={() => handleSelect(city)}
-                      className="cursor-pointer px-3 py-2 text-sm hover:bg-indigo-100"
-                  >
-                    {city}
-                  </li>
-              ))}
-            </ul>
-        )}
-
-        {isOpen && !loading && filteredCities.length === 0 && (
-            <div className="absolute z-20 mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-500 shadow">
-              No cities found
-            </div>
-        )}
-      </div>
-  );
 }
