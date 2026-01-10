@@ -72,13 +72,13 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => router.push("/others")}
+            onClick={() => router.push("/therapy-types")}
             className="bg-white border rounded-2xl p-5 text-left hover:shadow-sm transition"
           >
-            <div className="text-lg font-semibold">Others</div>
-            <div className="text-sm text-gray-600 mt-1">
-              Coming soon.
-            </div>
+          <div className="text-lg font-semibold">Type of Therapy</div>
+          <div className="text-sm text-gray-600 mt-1">
+              Learn about CBT, Gestalt, ACT, Psychodynamic and more.
+          </div>
           </button>
         </div>
 
