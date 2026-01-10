@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
 const nav: { href: string; label: string }[] = [
@@ -9,16 +12,27 @@ const nav: { href: string; label: string }[] = [
     { href: "/therapists/dashboard/profile", label: "Profile" },
 ];
 
-export default function TherapistDashboardLayout({
-                                                     children,
-                                                 }: {
-    children: ReactNode;
-}) {
+export default function TherapistDashboardLayout({ children }: { children: ReactNode }) {
+    const router = useRouter();
+
+    async function onLogout() {
+        try {
+            await fetch("/api/therapists/auth/logout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                cache: "no-store",
+            });
+        } finally {
+            // chiar dacă request-ul pică, te scoatem din portalul terapeutului
+            router.push("/therapists/auth/sign-in");
+            router.refresh();
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto p-6">
                 <div className="flex gap-6">
-                    {/* Sidebar */}
                     <aside className="hidden md:block w-72">
                         <div className="bg-white border rounded-2xl shadow-sm p-5 sticky top-6">
                             <div className="mb-5">
@@ -39,18 +53,17 @@ export default function TherapistDashboardLayout({
                             </nav>
 
                             <div className="mt-6 pt-5 border-t">
-                                {/* Logout later (server-safe placeholder) */}
-                                <Link
-                                    href="/"
-                                    className="block text-center px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 text-sm"
+                                <button
+                                    type="button"
+                                    onClick={onLogout}
+                                    className="w-full px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 text-sm"
                                 >
                                     Log out
-                                </Link>
+                                </button>
                             </div>
                         </div>
                     </aside>
 
-                    {/* Main */}
                     <main className="flex-1">{children}</main>
                 </div>
             </div>
