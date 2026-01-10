@@ -81,7 +81,9 @@ export default function TherapistsClient() {
     try {
       const params = new URLSearchParams();
       if (city.trim()) params.set("city", city.trim());
-      params.set("online", String(onlineOnly)); // backend-ul tău suportă online
+      if (onlineOnly) {
+        params.set("online", "true");
+      }
       if (issue) params.set("issue", issue); // backend: issue -> specialization (regex)
 
       const res = await fetch(`/api/therapists?${params.toString()}`, { cache: "no-store" });

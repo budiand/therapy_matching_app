@@ -23,7 +23,12 @@ export default function MatchesClient() {
     useEffect(() => {
         fetch("/api/matches", { cache: "no-store" })
             .then((r) => r.json())
-            .then(setItems)
+            .then((data) => {
+                const sorted = Array.isArray(data)
+                    ? [...data].sort((a, b) => b.matchScore - a.matchScore)
+                    : [];
+                setItems(sorted);
+            })
             .catch(() => setError("Failed to load matches"))
             .finally(() => setLoading(false));
     }, []);
@@ -33,17 +38,13 @@ export default function MatchesClient() {
     }
 
     if (error) {
-        return (
-            <div className="p-10 text-red-600">{error}</div>
-        );
+        return <div className="p-10 text-red-600">{error}</div>;
     }
 
     if (!items.length) {
         return (
             <div className="p-10">
-                <h1 className="text-xl font-semibold">
-                    No matches yet
-                </h1>
+                <h1 className="text-xl font-semibold">No matches yet</h1>
                 <p className="text-gray-600 mt-2">
                     Complete onboarding to get recommendations.
                 </p>

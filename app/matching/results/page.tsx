@@ -1,73 +1,142 @@
+// app/matching/results/page.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-type Therapist = {
+type Match = {
     _id: string;
     name: string;
     city: string;
     online: boolean;
     priceRange?: string;
     description?: string;
-    specializations?: string[];
-    approaches?: string[];
     matchScore: number;
     matchReasons: string[];
 };
 
 export default function ResultsPage() {
     const router = useRouter();
-    const [therapists, setTherapists] = useState<Therapist[]>([]);
+    const [items, setItems] = useState<Match[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     useEffect(() => {
         async function run() {
-            const raw = sessionStorage.getItem("intake");
-            if (!raw) return;
+            try {
+                const raw = sessionStorage.getItem("intake");
+                if (!raw) {
+                    setItems([]);
+                    return;
+                }
 
-            const res = await fetch("/api/match", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: raw,
-            });
+                const res = await fetch("/api/match", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: raw,
+                });
 
-            const data = await res.json();
-            setTherapists(data);
-            setLoading(false);
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data?.error || "Failed to load matches");
+                }
+
+                const sorted = Array.isArray(data)
+                    ? [...data].sort((a, b) => b.matchScore - a.matchScore)
+                    : [];
+
+                setItems(sorted);
+            } catch {
+                setError("Failed to load matches");
+            } finally {
+                setLoading(false);
+            }
         }
+
         run();
     }, []);
 
-    if (loading) return <div className="p-10">Loading...</div>;
+    if (loading) {
+        return <div className="p-10">Loading…</div>;
+    }
+
+    if (error) {
+        return <div className="p-10 text-red-600">{error}</div>;
+    }
+
+    if (!items.length) {
+        return (
+            <div className="p-10">
+                <h1 className="text-xl font-semibold">No matches yet</h1>
+                <p className="text-gray-600 mt-2">
+                    Complete onboarding to get recommendations.
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6">Your best matches</h1>
+        <div className="min-h-screen bg-gray-50">
+            <div className="max-w-5xl mx-auto px-4 py-8">
+                <h1 className="text-2xl font-bold mb-6">
+                    Your therapist matches
+                </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {therapists.map((t) => (
-                    <div key={t._id} className="bg-white border rounded-xl p-5">
-                        <h3 className="font-semibold text-lg">{t.name}</h3>
-                        <p className="text-sm text-gray-600">{t.city}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {items.map((t) => (
+                        <div
+                            key={t._id}
+                            className="bg-white border rounded-2xl p-5"
+                        >
+                            <div className="flex justify-between">
+                                <h3 className="text-lg font-semibold">
+                                    {t.name}
+                                </h3>
+                                <span className="text-sm rounded-full px-3 py-1 bg-indigo-50 text-indigo-700">
+                                    Score {t.matchScore}
+                                </span>
+                            </div>
 
-                        <div className="mt-4 flex gap-2">
-                            <button
-                                onClick={() => router.push(`/therapists/${t._id}`)}
-                                className="px-4 py-2 rounded-lg border"
-                            >
-                                View profile
-                            </button>
+                            <p className="text-sm text-gray-600 mt-1">
+                                {t.city} • {t.online ? "Online" : "In-person"}
+                            </p>
 
-                            <button
-                                onClick={() => router.push(`/book/${t._id}`)}
-                                className="px-4 py-2 rounded-lg bg-indigo-600 text-white"
-                            >
-                                Book a session
-                            </button>
+                            {t.description && (
+                                <p className="text-sm text-gray-700 mt-3">
+                                    {t.description}
+                                </p>
+                            )}
+
+                            {t.matchReasons?.length > 0 && (
+                                <ul className="mt-3 text-sm list-disc pl-5 text-gray-700">
+                                    {t.matchReasons.slice(0, 4).map((r, i) => (
+                                        <li key={i}>{r}</li>
+                                    ))}
+                                </ul>
+                            )}
+
+                            <div className="mt-4 flex gap-2">
+                                <button
+                                    className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
+                                    onClick={() =>
+                                        router.push(`/therapists/${t._id}`)
+                                    }
+                                >
+                                    View profile
+                                </button>
+
+                                <button
+                                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                                    onClick={() =>
+                                        router.push(`/book/${t._id}`)
+                                    }
+                                >
+                                    Book session
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
         </div>
     );
