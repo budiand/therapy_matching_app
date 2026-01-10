@@ -403,10 +403,6 @@ export default function TherapistAvailabilityPage() {
                         </div>
                     </div>
                 )}
-
-                <p className="text-xs text-gray-500 mt-6">
-                    This page is now connected to MongoDB via /api/therapists/availability.
-                </p>
             </div>
         </div>
     );

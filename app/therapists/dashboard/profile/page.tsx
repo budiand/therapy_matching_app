@@ -720,10 +720,6 @@ export default function TherapistProfilePage() {
                         </Card>
                     </div>
                 </div>
-
-                <p className="text-xs text-gray-500 mt-6">
-                    This profile is loaded/saved per logged-in therapist via cookie <code>tm_tid</code>.
-                </p>
             </div>
 
             <style jsx global>{`

@@ -193,10 +193,6 @@ export default function TherapistClientsPage() {
                         </div>
                     )}
                 </div>
-
-                <p className="text-xs text-gray-500 mt-4">
-                    Note: clients are derived from your bookings (therapistId cookie + Booking.userId).
-                </p>
             </div>
         </div>
     );

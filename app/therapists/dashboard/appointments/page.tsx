@@ -232,10 +232,6 @@ export default function TherapistAppointmentsPage() {
                         </div>
                     )}
                 </div>
-
-                <p className="text-xs text-gray-500 mt-4">
-                    This list is per logged-in therapist (cookie <code>tm_tid</code>).
-                </p>
             </div>
         </div>
     );
