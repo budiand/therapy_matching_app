@@ -1,8 +1,12 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const UserSchema = new mongoose.Schema(
     {
-        name: { type: String, required: true, trim: true },
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
 
         email: {
             type: String,
@@ -12,13 +16,46 @@ const UserSchema = new mongoose.Schema(
             trim: true,
         },
 
-        phone: { type: String, required: true, trim: true },
+        phone: {
+            type: String,
+            required: true,
+            trim: true,
+        },
 
-        passwordHash: { type: String, required: true },
+        passwordHash: {
+            type: String,
+            required: true,
+        },
 
-        age: { type: Number, required: true, min: 13, max: 120 },
+        age: {
+            type: Number,
+            required: true,
+            min: 13,
+            max: 120,
+        },
+
+        recommendedTherapists: [
+            {
+                therapistId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Therapist",
+                    required: true,
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                reasons: {
+                    type: [String],
+                    default: [],
+                },
+            },
+        ],
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+    }
 );
 
-export default mongoose.models.User || mongoose.model("User", UserSchema);
+export default mongoose.models.User ||
+    mongoose.model("User", UserSchema);

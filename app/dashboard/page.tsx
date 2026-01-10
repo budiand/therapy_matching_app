@@ -62,6 +62,16 @@ export default function DashboardPage() {
           </button>
 
           <button
+              onClick={() => router.push("/matches")}
+              className="bg-white border rounded-2xl p-5 text-left hover:shadow-sm transition"
+          >
+              <div className="text-lg font-semibold">Your matches</div>
+              <div className="text-sm text-gray-600 mt-1">
+                  View therapists recommended for you.
+              </div>
+          </button>
+
+          <button
             onClick={() => router.push("/others")}
             className="bg-white border rounded-2xl p-5 text-left hover:shadow-sm transition"
           >
