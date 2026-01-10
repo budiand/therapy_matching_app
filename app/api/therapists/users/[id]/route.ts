@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
@@ -14,35 +16,20 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         await connectMongo();
 
         const tid = getTherapistIdFromCookie();
-        if (!tid) {
-            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-        }
+        if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
         const userId = params?.id;
-
         if (!mongoose.Types.ObjectId.isValid(tid) || !mongoose.Types.ObjectId.isValid(userId)) {
             return NextResponse.json({ error: "Invalid id" }, { status: 400 });
         }
 
-        // ✅ SECURITY: userul trebuie să aibă cel puțin o programare cu terapeutul (Appointment)
-        const hasRelation = await Appointment.exists({
-            therapistId: tid,
-            userId: userId,
-        });
+        // ✅ relation exists if at least one appointment therapist<->user
+        const hasRelation = await Appointment.exists({ therapistId: tid, userId });
+        if (!hasRelation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-        if (!hasRelation) {
-            return NextResponse.json({ error: "Not found" }, { status: 404 });
-        }
+        const user = await User.findById(userId).select("name email phone age createdAt updatedAt").lean();
+        if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-        const user = await User.findById(userId)
-            .select("name email phone age createdAt updatedAt")
-            .lean();
-
-        if (!user) {
-            return NextResponse.json({ error: "Not found" }, { status: 404 });
-        }
-
-        // ✅ ultima ședință (din appointments)
         const lastAppt = await Appointment.findOne({ therapistId: tid, userId })
             .sort({ dateISO: -1, createdAt: -1 })
             .select("dateISO createdAt")
@@ -64,6 +51,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
                     email: (user as any).email,
                     phone: (user as any).phone,
                     age: (user as any).age,
+                    sinceISO: (user as any).createdAt ? new Date((user as any).createdAt).toISOString() : null,
                     lastSessionISO,
                     createdAt: (user as any).createdAt,
                     updatedAt: (user as any).updatedAt,

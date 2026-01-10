@@ -7,21 +7,23 @@ import CityAutocomplete from "../components/CityAutocomplete";
 type Therapist = {
   _id: string;
   name: string;
-  city: string;
-  online: boolean;
+  city?: string;
+  online?: boolean;
 
   priceRange?: string;
   description?: string;
 
-  // în schema ta mare ai:
   specializations?: string[];
   approaches?: string[];
 
-  // în unele coduri vechi ai:
+  // legacy fields
   specialization?: string;
+  approach?: string;
+
+  createdAt?: string; // helpful for "newest" sort if returned by API
 };
 
-const ISSUES = [
+const TOPICS = [
   { value: "", label: "All topics" },
   { value: "Anxiety", label: "Anxiety" },
   { value: "Depression", label: "Depression" },
@@ -36,10 +38,11 @@ const APPROACHES = [
   { value: "CBT", label: "CBT" },
   { value: "Psychodynamic", label: "Psychodynamic" },
   { value: "ACT", label: "ACT" },
-  { value: "Schema therapy", label: "Schema therapy" },
+  { value: "Schema", label: "Schema therapy" },
   { value: "Gestalt", label: "Gestalt" },
   { value: "DBT", label: "DBT" },
   { value: "EMDR", label: "EMDR" },
+  { value: "Mindfulness", label: "Mindfulness-based" },
 ];
 
 const PRICE = [
@@ -57,13 +60,25 @@ function norm(s?: string) {
   return (s || "").toLowerCase().trim();
 }
 
+function getTherapyLabel(t: Therapist) {
+  // show something meaningful on the pill
+  return (
+      t.specialization ||
+      t.specializations?.[0] ||
+      (t.approaches?.[0] ? `Approach: ${t.approaches[0]}` : "") ||
+      "Therapist"
+  );
+}
+
 export default function TherapistsClient() {
   const router = useRouter();
 
-  // filters
+  // server filters
   const [city, setCity] = useState("");
   const [onlineOnly, setOnlineOnly] = useState(false);
-  const [issue, setIssue] = useState("");
+  const [topic, setTopic] = useState("");
+
+  // local filters
   const [approach, setApproach] = useState("");
   const [price, setPrice] = useState("");
   const [q, setQ] = useState("");
@@ -74,26 +89,26 @@ export default function TherapistsClient() {
   const [items, setItems] = useState<Therapist[]>([]);
   const [error, setError] = useState("");
 
-  async function load() {
+  async function loadFromApi() {
     setLoading(true);
     setError("");
 
     try {
       const params = new URLSearchParams();
       if (city.trim()) params.set("city", city.trim());
-      if (onlineOnly) {
-        params.set("online", "true");
-      }
-      if (issue) params.set("issue", issue); // backend: issue -> specialization (regex)
+      if (onlineOnly) params.set("online", "true");
+      if (topic) params.set("issue", topic);
 
-      const res = await fetch(`/api/therapists?${params.toString()}`, { cache: "no-store" });
+      const res = await fetch(`/api/therapists?${params.toString()}`, {
+        cache: "no-store",
+      });
+
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
         throw new Error(data?.error || `Failed to load therapists (${res.status})`);
       }
 
-      // backend-ul tău returnează array direct
       setItems(Array.isArray(data) ? (data as Therapist[]) : []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -104,25 +119,27 @@ export default function TherapistsClient() {
   }
 
   useEffect(() => {
-    load();
+    void loadFromApi();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredLocal = useMemo(() => {
     let arr = [...items];
 
-    // q search
+    // Search
     if (q.trim()) {
       const qq = norm(q);
       arr = arr.filter((t) => {
+        const allApproaches = [...(t.approaches || []), t.approach].filter(Boolean) as string[];
+        const allSpecs = [...(t.specializations || []), t.specialization].filter(Boolean) as string[];
+
         const hay = [
           t.name,
           t.city,
           t.description,
           t.priceRange,
-          t.specialization,
-          ...(t.specializations || []),
-          ...(t.approaches || []),
+          ...allSpecs,
+          ...allApproaches,
         ]
             .filter(Boolean)
             .map(String)
@@ -133,21 +150,31 @@ export default function TherapistsClient() {
       });
     }
 
-    // approach filter
+    // Approach (local)
     if (approach) {
       const a = norm(approach);
-      arr = arr.filter((t) => (t.approaches || []).some((x) => norm(x).includes(a)));
+      arr = arr.filter((t) => {
+        const allApproaches = [...(t.approaches || []), t.approach].filter(Boolean) as string[];
+        return allApproaches.some((x) => norm(x).includes(a));
+      });
     }
 
-    // price filter (MVP: string contains)
+    // Price (local)
     if (price) {
       const p = norm(price);
       arr = arr.filter((t) => norm(t.priceRange).includes(p));
     }
 
-    // sort
+    // Sort
     if (sort === "name") {
       arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    } else {
+      // newest
+      arr.sort((a, b) => {
+        const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bt - at;
+      });
     }
 
     return arr;
@@ -156,12 +183,12 @@ export default function TherapistsClient() {
   function resetFilters() {
     setCity("");
     setOnlineOnly(false);
-    setIssue("");
+    setTopic("");
     setApproach("");
     setPrice("");
     setQ("");
     setSort("newest");
-    setTimeout(() => load(), 0);
+    void loadFromApi();
   }
 
   function viewProfile(t: Therapist) {
@@ -169,19 +196,18 @@ export default function TherapistsClient() {
   }
 
   function bookSession(t: Therapist) {
-    // booking-ul REAL îl faci în /book/[id]
     router.push(`/book/${t._id}`);
   }
 
   return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 py-8">
-          {/* Top header */}
+          {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">Explore therapists</h1>
               <p className="text-gray-600 mt-2">
-                Filter by city, availability format and topic. Then view profiles or book a session.
+                Filter by city, format, and topic. Then view profiles or book a session.
               </p>
             </div>
 
@@ -205,6 +231,7 @@ export default function TherapistsClient() {
           {/* Filters */}
           <div className="mt-6 bg-white border rounded-2xl p-5">
             <div className="grid gap-4 md:grid-cols-4">
+              {/* Search */}
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Search</label>
                 <input
@@ -215,14 +242,15 @@ export default function TherapistsClient() {
                 />
               </div>
 
+              {/* Topic (server) */}
               <div>
                 <label className="text-sm font-medium">Topic</label>
                 <select
                     className="mt-1 w-full border rounded-lg p-2 bg-white"
-                    value={issue}
-                    onChange={(e) => setIssue(e.target.value)}
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
                 >
-                  {ISSUES.map((x) => (
+                  {TOPICS.map((x) => (
                       <option key={x.value} value={x.value}>
                         {x.label}
                       </option>
@@ -230,6 +258,7 @@ export default function TherapistsClient() {
                 </select>
               </div>
 
+              {/* Sort */}
               <div>
                 <label className="text-sm font-medium">Sort</label>
                 <select
@@ -242,6 +271,7 @@ export default function TherapistsClient() {
                 </select>
               </div>
 
+              {/* City (server) */}
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">City</label>
                 <div className="mt-1">
@@ -249,6 +279,7 @@ export default function TherapistsClient() {
                 </div>
               </div>
 
+              {/* Approach (local) */}
               <div>
                 <label className="text-sm font-medium">Approach</label>
                 <select
@@ -264,6 +295,7 @@ export default function TherapistsClient() {
                 </select>
               </div>
 
+              {/* Price (local) */}
               <div>
                 <label className="text-sm font-medium">Price</label>
                 <select
@@ -279,6 +311,7 @@ export default function TherapistsClient() {
                 </select>
               </div>
 
+              {/* Online + actions */}
               <div className="md:col-span-4 flex items-center justify-between gap-3">
                 <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
                   <input
@@ -299,7 +332,7 @@ export default function TherapistsClient() {
 
                   <button
                       className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                      onClick={load}
+                      onClick={loadFromApi}
                   >
                     Apply filters
                   </button>
@@ -314,7 +347,7 @@ export default function TherapistsClient() {
             )}
           </div>
 
-          {/* List */}
+          {/* Results */}
           <div className="mt-6">
             {loading ? (
                 <div className="p-10 min-h-[30vh] bg-gradient-to-br from-indigo-100 to-blue-200 rounded-2xl">
@@ -333,7 +366,7 @@ export default function TherapistsClient() {
                           <div>
                             <h3 className="text-lg font-semibold">{t.name}</h3>
                             <p className="text-sm text-gray-600 mt-1">
-                              {t.city} • {t.online ? "Online available" : "In-person only"}
+                              {(t.city || "—")} • {t.online ? "Online available" : "In-person only"}
                               {t.priceRange ? ` • ${t.priceRange}` : ""}
                             </p>
                           </div>
@@ -346,7 +379,7 @@ export default function TherapistsClient() {
                                       : "bg-gray-50 text-gray-700 border-gray-200"
                               )}
                           >
-                      {t.specialization || (t.specializations?.[0] ?? "Therapist")}
+                      {getTherapyLabel(t)}
                     </span>
                         </div>
 
@@ -356,11 +389,14 @@ export default function TherapistsClient() {
                             <p className="text-sm text-gray-500 mt-3">No description provided.</p>
                         )}
 
-                        {t.approaches?.length ? (
+                        {(t.approaches?.length || t.approach) ? (
                             <p className="text-sm text-gray-700 mt-3">
                               <span className="font-medium">Approaches:</span>{" "}
-                              {t.approaches.slice(0, 3).join(", ")}
-                              {t.approaches.length > 3 ? "…" : ""}
+                              {[...(t.approaches || []), t.approach]
+                                  .filter(Boolean)
+                                  .slice(0, 3)
+                                  .join(", ")}
+                              {((t.approaches?.length || 0) + (t.approach ? 1 : 0)) > 3 ? "…" : ""}
                             </p>
                         ) : null}
 

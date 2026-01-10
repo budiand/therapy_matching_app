@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
 import connectMongo from "@/db/mongoose";
-import User from "@/models/User";
 import Appointment from "@/models/Appointment";
+import User from "@/models/User";
 
 function getTherapistIdFromCookie() {
     return cookies().get("tm_tid")?.value || null;
@@ -16,54 +16,51 @@ export async function GET() {
         await connectMongo();
 
         const tid = getTherapistIdFromCookie();
-        if (!tid) {
-            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-        }
+        if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         if (!mongoose.Types.ObjectId.isValid(tid)) {
             return NextResponse.json({ error: "Invalid therapist id" }, { status: 400 });
         }
 
-        // 1) toate appointments ale terapeutului (doar ce ne trebuie)
+        // 1) All appointments of this therapist
         const appts = await Appointment.find({ therapistId: tid })
             .select("userId dateISO createdAt")
             .lean();
 
-        // 2) map userId -> lastSessionISO
-        const mapLastSession = new Map<string, string>();
-        for (const a of appts as any[]) {
-            const uid = String(a.userId);
-            const when = a.dateISO || a.createdAt;
-            const iso = when ? new Date(when).toISOString() : null;
-            if (!iso) continue;
+        // 2) compute lastSessionISO per userId
+        const lastMap = new Map<string, string>();
+        for (const a of appts) {
+            const uid = String((a as any).userId);
+            const when = (a as any).dateISO || (a as any).createdAt;
+            if (!uid || !when) continue;
 
-            const prev = mapLastSession.get(uid);
+            const iso = new Date(when).toISOString();
+            const prev = lastMap.get(uid);
+
             if (!prev || new Date(iso).getTime() > new Date(prev).getTime()) {
-                mapLastSession.set(uid, iso);
+                lastMap.set(uid, iso);
             }
         }
 
-        const userIds = Array.from(mapLastSession.keys());
+        const userIds = Array.from(lastMap.keys()).filter((id) => mongoose.Types.ObjectId.isValid(id));
         if (userIds.length === 0) {
-            return NextResponse.json(
-                { ok: true, users: [] },
-                { status: 200, headers: { "Cache-Control": "no-store" } }
-            );
+            return NextResponse.json({ ok: true, users: [] }, { status: 200, headers: { "Cache-Control": "no-store" } });
         }
 
-        // 3) fetch users (fără passwordHash)
+        // 3) Fetch users
         const users = await User.find({ _id: { $in: userIds } })
             .select("name email phone age createdAt updatedAt")
             .lean();
 
-        // 4) attach lastSessionISO + sort
-        const out = (users as any[])
-            .map((u) => ({
+        // 4) Output sorted by lastSession
+        const out = users
+            .map((u: any) => ({
                 id: String(u._id),
                 name: u.name,
                 email: u.email,
                 phone: u.phone,
                 age: u.age,
-                lastSessionISO: mapLastSession.get(String(u._id)) || null,
+                sinceISO: u.createdAt ? new Date(u.createdAt).toISOString() : null,
+                lastSessionISO: lastMap.get(String(u._id)) || null,
                 createdAt: u.createdAt,
                 updatedAt: u.updatedAt,
             }))
