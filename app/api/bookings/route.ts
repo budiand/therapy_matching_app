@@ -3,20 +3,73 @@ import { cookies } from "next/headers";
 import mongoose from "mongoose";
 import connectMongo from "@/db/mongoose";
 import Appointment from "@/models/Appointment";
+import Therapist from "@/models/Therapist";
 
 export const dynamic = "force-dynamic";
 
-function cleanLocation(x: any) {
-  const s = String(x || "").trim();
-  return s === "online" || s === "in_person" ? s : null;
+function getUid() {
+  return cookies().get("tm_uid")?.value || null;
 }
 
+// ✅ CLIENT calendar: returns [{ id, therapistName, start, end, location, status }]
+export async function GET() {
+  try {
+    await connectMongo();
+
+    const uid = getUid();
+    if (!uid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    if (!mongoose.Types.ObjectId.isValid(uid)) {
+      return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
+    }
+
+    const appts = await Appointment.find({ userId: uid })
+        .sort({ dateISO: 1 })
+        .lean();
+
+    const therapistIds = Array.from(new Set(appts.map((a: any) => String(a.therapistId))));
+    const therapists = await Therapist.find({ _id: { $in: therapistIds } })
+        .select("name")
+        .lean();
+
+    const therapistNameMap = new Map<string, string>(
+        therapists.map((t: any) => [String(t._id), t.name])
+    );
+
+    const out = appts.map((a: any) => {
+      const start = new Date(a.dateISO);
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + (a.durationMin ?? 50));
+
+      return {
+        id: String(a._id),
+        therapistId: String(a.therapistId),
+        therapistName: therapistNameMap.get(String(a.therapistId)) || "Therapist",
+        start: start.toISOString(),
+        end: end.toISOString(),
+        location: a.location,
+        status: a.status,
+      };
+    });
+
+    return NextResponse.json(out, {
+      status: 200,
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (e) {
+    console.error("BOOKINGS GET ERROR:", e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// ✅ (optional) păstrează POST-ul tău aici, dar asigură-te că:
+// - salvează în Appointment
+// - primește dateISO, therapistId, location
 export async function POST(req: Request) {
   try {
     await connectMongo();
     const body = await req.json().catch(() => ({}));
 
-    const uid = cookies().get("tm_uid")?.value;
+    const uid = getUid();
     if (!uid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     if (!mongoose.Types.ObjectId.isValid(uid)) {
       return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
@@ -27,31 +80,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid therapistId" }, { status: 400 });
     }
 
-    const location = cleanLocation(body?.location);
-    if (!location) return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+    const location = String(body?.location || "");
+    if (!["online", "in_person"].includes(location)) {
+      return NextResponse.json({ error: "Invalid location" }, { status: 400 });
+    }
 
-    const dateISO = body?.dateISO;
-    const dt = new Date(dateISO);
-    if (!dateISO || Number.isNaN(dt.getTime())) {
+    const dt = new Date(body?.dateISO);
+    if (!body?.dateISO || Number.isNaN(dt.getTime())) {
       return NextResponse.json({ error: "Invalid dateISO" }, { status: 400 });
     }
 
     const durationMin = Number(body?.durationMin ?? 50);
-    if (!Number.isFinite(durationMin) || durationMin <= 0 || durationMin > 240) {
-      return NextResponse.json({ error: "Invalid durationMin" }, { status: 400 });
-    }
-
-    // (optional dar recomandat) prevenire dubluri identice
-    const exists = await Appointment.findOne({
-      therapistId,
-      userId: uid,
-      dateISO: dt,
-      status: { $in: ["scheduled"] },
-    }).lean();
-
-    if (exists) {
-      return NextResponse.json({ error: "This slot is already booked." }, { status: 409 });
-    }
 
     const created = await Appointment.create({
       therapistId,
@@ -65,20 +104,12 @@ export async function POST(req: Request) {
     return NextResponse.json(
         {
           ok: true,
-          appointment: {
-            id: String(created._id),
-            therapistId: String(created.therapistId),
-            userId: String(created.userId),
-            dateISO: created.dateISO.toISOString(),
-            durationMin: created.durationMin,
-            location: created.location,
-            status: created.status,
-          },
+          appointmentId: String(created._id),
         },
-        { status: 201 }
+        { status: 201, headers: { "Cache-Control": "no-store" } }
     );
   } catch (e) {
-    console.error("BOOKING CREATE ERROR:", e);
+    console.error("BOOKINGS POST ERROR:", e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
