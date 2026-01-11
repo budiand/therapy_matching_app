@@ -97,16 +97,37 @@ export default function TherapistClientDetailPage() {
         async function loadNotes() {
             setLoadingNotes(true);
             setError("");
-            try {
-                const res = await fetch(`/api/therapists/clients/${clientId}/notes`, { method: "GET" });
-                const data = await res.json().catch(() => null);
-                if (!res.ok) throw new Error(data?.error || `Failed to load notes (${res.status}).`);
 
-                if (!cancelled) setNotes((data.notes ?? []) as Note[]);
+            try {
+                const res = await fetch(
+                    `/api/therapists/clients/${clientId}/notes`,
+                    { method: "GET" }
+                );
+
+                const data = await res.json().catch(() => null);
+                if (!res.ok) {
+                    throw new Error(data?.error || `Failed to load notes (${res.status}).`);
+                }
+
+                if (!cancelled) {
+                    const normalizedNotes: Note[] = (data.notes ?? []).map((n: any) => ({
+                        id: n.id || n._id,
+                        createdAtISO: n.createdAtISO || n.createdAt,
+                        title: n.title,
+                        content: n.content,
+                        tags: n.tags ?? [],
+                    }));
+
+                    setNotes(normalizedNotes);
+                }
             } catch (e: any) {
-                if (!cancelled) setError(e?.message || "Failed to load notes.");
+                if (!cancelled) {
+                    setError(e?.message || "Failed to load notes.");
+                }
             } finally {
-                if (!cancelled) setLoadingNotes(false);
+                if (!cancelled) {
+                    setLoadingNotes(false);
+                }
             }
         }
 
@@ -132,6 +153,7 @@ export default function TherapistClientDetailPage() {
             .filter(Boolean);
 
         setSavingNote(true);
+
         try {
             const res = await fetch(`/api/therapists/clients/${clientId}/notes`, {
                 method: "POST",
@@ -144,12 +166,25 @@ export default function TherapistClientDetailPage() {
             });
 
             const data = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(data?.error || `Failed to add note (${res.status}).`);
+            if (!res.ok) {
+                throw new Error(data?.error || `Failed to add note (${res.status}).`);
+            }
 
-            // server returns created note
-            setNotes((prev) => [data.note as Note, ...prev]);
+            const created = data.note;
+
+            // ✅ NORMALIZARE
+            const normalizedNote: Note = {
+                id: created.id || created._id,
+                createdAtISO: created.createdAtISO || created.createdAt,
+                title: created.title,
+                content: created.content,
+                tags: created.tags ?? [],
+            };
+
+            setNotes((prev) => [normalizedNote, ...prev]);
             setTitle("");
             setContent("");
+            setTagsInput("CBT, homework");
         } catch (e: any) {
             setError(e?.message || "Failed to add note.");
         } finally {
@@ -186,9 +221,6 @@ export default function TherapistClientDetailPage() {
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold">{client?.name ?? "Client"}</h1>
-                            <p className="text-gray-600 mt-1">
-                                Client ID: <span className="font-mono">{clientId}</span>
-                            </p>
                         </div>
                     </div>
 
