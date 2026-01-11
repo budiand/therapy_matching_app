@@ -72,7 +72,7 @@ export default function TherapistSignUpPage() {
       if (!res.ok) {
         throw new Error(data?.error || data?.message || `Sign up failed (${res.status}).`);
       }
-      router.push(data?.next || "/therapists/dashboard");
+      router.push(data?.next || "/therapists/agreements");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
