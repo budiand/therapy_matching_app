@@ -44,6 +44,34 @@ const CredentialSchema = new mongoose.Schema(
     { _id: false }
 );
 
+/**
+ * NEW: Agreements schema (no _id to keep it clean)
+ */
+const AgreementsSchema = new mongoose.Schema(
+    {
+        accepted: { type: Boolean, default: false },
+        acceptedAt: { type: Date },
+        version: { type: String }, // e.g. "2026-01-11"
+        ip: { type: String },
+
+        // Keep explicit commission % for clarity / audits
+        commissionRate: { type: Number, default: 0.15 }, // 15%
+
+        // Optional: store what exact documents were accepted + versions
+        documents: [
+            {
+                key: {
+                    type: String,
+                    enum: ["service_agreement", "terms", "privacy"],
+                    required: true,
+                },
+                version: { type: String, required: true },
+            },
+        ],
+    },
+    { _id: false }
+);
+
 const TherapistSchema = new mongoose.Schema(
     {
         /* =====================
@@ -149,52 +177,42 @@ const TherapistSchema = new mongoose.Schema(
 
         /* =====================
            MATCHING – STYLE & FIT
-           (the stuff you said is important)
         ====================== */
-
-        // structured / unstructured etc.
         sessionStructure: {
             type: String,
             enum: ["structured", "semi", "free"],
             required: true,
         },
 
-        // more direct vs more listening
         therapistActivity: {
             type: String,
             enum: ["active", "balanced", "listening"],
             required: true,
         },
 
-        // conversational style
         communicationStyle: {
             type: String,
             enum: ["monologue", "questions", "mix"],
             required: true,
         },
 
-        // client autonomy vs therapist pushes
         guidanceStyle: {
             type: String,
             enum: ["autonomous", "need_push", "mix"],
             required: true,
         },
 
-        // focus: thoughts vs emotions
         focusStyle: {
             type: String,
             enum: ["thoughts", "emotions", "mix"],
             required: true,
         },
 
-        // extra style dimensions you mentioned:
-        directness: { type: Number, min: 0, max: 10, default: 5 }, // 0 gentle -> 10 very direct
+        directness: { type: Number, min: 0, max: 10, default: 5 },
         pace: { type: String, enum: ["slow", "medium", "fast"], default: "medium" },
         warmth: { type: Number, min: 0, max: 10, default: 6 },
 
         givesHomework: { type: Boolean, default: false },
-
-        // “structured vs unstructured” as a clearer boolean too
         offersStructuredPrograms: { type: Boolean, default: false },
 
         /* =====================
@@ -212,27 +230,25 @@ const TherapistSchema = new mongoose.Schema(
 
         /* =====================
            CREDENTIALS / UPLOADS
-           (license + certificates)
         ====================== */
-        // a quick “main proof” upload (license/attestation)
-        primaryCredentialUrl: { type: String }, // required in UI; optional in DB if you want flexible
-
-        // multiple documents (including CBT/ACT course certificates)
+        primaryCredentialUrl: { type: String },
         credentials: [CredentialSchema],
 
         /* =====================
            DASHBOARD / OPERATIONS
-           (for your later therapist dashboard)
         ====================== */
-        // You can keep availability and appointments in separate collections,
-        // but adding flags helps UI.
         onboardingCompleted: { type: Boolean, default: false },
+
+        /* =====================
+           NEW: AGREEMENTS (required after signup)
+        ====================== */
+        agreements: { type: AgreementsSchema, default: () => ({}) },
 
         /* =====================
            META / VISIBILITY
         ====================== */
         isActive: { type: Boolean, default: true },
-        isVerified: { type: Boolean, default: false }, // if you manually review docs
+        isVerified: { type: Boolean, default: false },
         verificationStatus: {
             type: String,
             enum: ["pending", "approved", "rejected"],
@@ -244,5 +260,4 @@ const TherapistSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-export default mongoose.models.Therapist ||
-mongoose.model("Therapist", TherapistSchema);
+export default mongoose.models.Therapist || mongoose.model("Therapist", TherapistSchema);
