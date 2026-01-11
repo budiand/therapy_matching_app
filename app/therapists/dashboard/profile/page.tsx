@@ -696,12 +696,6 @@ export default function TherapistProfilePage() {
                                     )}
                                 </div>
 
-                                <div className="rounded-xl border bg-gray-50 p-3 text-sm text-gray-700">
-                                    <p className="font-medium">Note</p>
-                                    <p className="text-gray-600 mt-1">
-                                        Uploads are UI-only for now. To store them, you’ll later add a file storage (S3/Cloudinary).
-                                    </p>
-                                </div>
                             </div>
                         </Card>
 

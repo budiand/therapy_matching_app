@@ -396,9 +396,6 @@ export default function TherapistAvailabilityPage() {
                                     </button>
                                 </div>
 
-                                <p className="text-xs text-gray-500 mt-3">
-                                    Tip: later you can support exceptions (vacations, one-off days) using date-specific availability.
-                                </p>
                             </div>
                         </div>
                     </div>
