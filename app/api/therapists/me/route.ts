@@ -1,19 +1,36 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import mongoose from "mongoose";
 import connectMongo from "@/db/mongoose";
 import Therapist from "@/models/Therapist";
+
+export const dynamic = "force-dynamic";
+
+function getTid() {
+    return cookies().get("tm_tid")?.value || null;
+}
 
 export async function GET() {
     try {
         await connectMongo();
 
-        const tid = cookies().get("tm_tid")?.value;
+        const tid = getTid();
         if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        if (!mongoose.Types.ObjectId.isValid(tid)) {
+            return NextResponse.json({ error: "Invalid therapist id" }, { status: 400 });
+        }
 
-        const therapist = await Therapist.findById(tid).select("-passwordHash");
+        // IMPORTANT: lean() => JSON safe (fără circular)
+        const therapist = await Therapist.findById(tid)
+            .select("-passwordHash")
+            .lean();
+
         if (!therapist) return NextResponse.json({ error: "Therapist not found" }, { status: 404 });
 
-        return NextResponse.json({ ok: true, therapist }, { status: 200 });
+        return NextResponse.json(
+            { ok: true, therapist },
+            { status: 200, headers: { "Cache-Control": "no-store" } }
+        );
     } catch (e) {
         console.error("ME GET ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -24,8 +41,11 @@ export async function PUT(req: Request) {
     try {
         await connectMongo();
 
-        const tid = cookies().get("tm_tid")?.value;
+        const tid = getTid();
         if (!tid) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        if (!mongoose.Types.ObjectId.isValid(tid)) {
+            return NextResponse.json({ error: "Invalid therapist id" }, { status: 400 });
+        }
 
         const body = await req.json().catch(() => ({}));
 
@@ -64,14 +84,20 @@ export async function PUT(req: Request) {
             pace: body?.pace,
         };
 
-        const updated = await Therapist.findByIdAndUpdate(tid, allowed, {
+        const updatedDoc = await Therapist.findByIdAndUpdate(tid, allowed, {
             new: true,
             runValidators: true,
         }).select("-passwordHash");
 
-        if (!updated) return NextResponse.json({ error: "Therapist not found" }, { status: 404 });
+        if (!updatedDoc) return NextResponse.json({ error: "Therapist not found" }, { status: 404 });
 
-        return NextResponse.json({ ok: true, therapist: updated }, { status: 200 });
+        // toObject() => JSON safe
+        const therapist = updatedDoc.toObject();
+
+        return NextResponse.json(
+            { ok: true, therapist },
+            { status: 200, headers: { "Cache-Control": "no-store" } }
+        );
     } catch (e) {
         console.error("ME PUT ERROR:", e);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

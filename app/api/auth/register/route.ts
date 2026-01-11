@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         });
 
         const res = NextResponse.json(
-            { ok: true, userId: String(created._id) },
+            { ok: true, therapistId: String(created._id), next: "/therapists/agreements" },
             { status: 201 }
         );
 
