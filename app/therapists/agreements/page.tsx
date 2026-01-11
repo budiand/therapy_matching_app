@@ -96,7 +96,7 @@ export default function TherapistAgreementsPage() {
                                 className="mt-1"
                             />
                             <span>
-                Sunt de acord cu termenii, inclusiv comisionul de <b>15%</b> din prețul fiecărei ședințe.
+                I agree to the terms and conditions, including the <b>15%</b> commission applied to the price of each session.
               </span>
                         </label>
 
