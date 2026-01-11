@@ -70,12 +70,9 @@ export default function TherapistSignUpPage() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(
-            data?.error || data?.message || `Sign up failed (${res.status}).`
-        );
+        throw new Error(data?.error || data?.message || `Sign up failed (${res.status}).`);
       }
-
-      router.push("/therapists/dashboard");
+      router.push(data?.next || "/therapists/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

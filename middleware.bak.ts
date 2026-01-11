@@ -12,11 +12,25 @@ export function middleware(req: NextRequest) {
     ======================
   */
   if (
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/therapist/sign-in") ||
-    pathname.startsWith("/therapist/sign-up") ||
-    pathname.startsWith("/api")
+      pathname.startsWith("/auth") ||
+      pathname.startsWith("/therapists/sign-in") ||
+      pathname.startsWith("/therapists/sign-up") ||
+      pathname.startsWith("/api")
   ) {
+    return NextResponse.next();
+  }
+
+  /*
+    ======================
+    THERAPIST AGREEMENTS (ONLY therapist)
+    ======================
+  */
+  if (pathname.startsWith("/therapists/agreements")) {
+    if (!therapistId) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/therapists/sign-in";
+      return NextResponse.redirect(url);
+    }
     return NextResponse.next();
   }
 
@@ -25,10 +39,10 @@ export function middleware(req: NextRequest) {
     THERAPIST PROTECTED
     ======================
   */
-  if (pathname.startsWith("/therapist")) {
+  if (pathname.startsWith("/therapists")) {
     if (!therapistId) {
       const url = req.nextUrl.clone();
-      url.pathname = "/therapist/sign-in";
+      url.pathname = "/therapists/sign-in";
       return NextResponse.redirect(url);
     }
   }
@@ -38,11 +52,7 @@ export function middleware(req: NextRequest) {
     USER PROTECTED
     ======================
   */
-  const userProtected = [
-    "/dashboard",
-    "/onboarding",
-    "/matching",
-  ];
+  const userProtected = ["/dashboard", "/onboarding", "/matching"];
 
   if (userProtected.some((r) => pathname.startsWith(r))) {
     if (!userId) {
@@ -56,7 +66,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
