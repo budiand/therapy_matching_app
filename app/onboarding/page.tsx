@@ -47,23 +47,29 @@ const REASONS_GROUPS: { title: string; items: string[] }[] = [
         title: "Emotional health",
         items: [
             "Anxiety",
-            "Depression / persistent low mood",
+            "Depression",
             "Panic attacks",
-            "Burnout / chronic stress",
+            "Burnout",
+            "Stress",
             "Sleep problems",
             "Emotional regulation",
             "Overthinking / rumination",
+            "Perfectionism",
+            "Trauma",
+            "Grief",
         ],
     },
     {
         title: "Relationships",
         items: [
+            "Relationships",
             "Family",
             "Couples",
             "Communication issues",
             "Attachment / fear of abandonment",
             "Conflict & boundaries",
             "Social difficulties",
+            "Social anxiety",
         ],
     },
     {
@@ -82,14 +88,14 @@ const REASONS_GROUPS: { title: string; items: string[] }[] = [
     },
     {
         title: "Behaviors",
-        items: [
-            "Procrastination",
-            "Addictions (substance or behavioral)",
-            "Habits I want to change",
-            "Anger management",
-        ],
+        items: ["Procrastination", "Habits I want to change", "Addictions", "Anger management"],
+    },
+    {
+        title: "Clinical topics",
+        items: ["ADHD", "Eating disorders"],
     },
 ];
+
 
 const DEALBREAKERS = [
     "Too rigid",

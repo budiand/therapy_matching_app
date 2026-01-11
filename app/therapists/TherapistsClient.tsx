@@ -25,25 +25,70 @@ type Therapist = {
 
 const TOPICS = [
   { value: "", label: "All topics" },
+
+  // Emotional health
   { value: "Anxiety", label: "Anxiety" },
   { value: "Depression", label: "Depression" },
+  { value: "Panic attacks", label: "Panic attacks" },
   { value: "Burnout", label: "Burnout" },
+  { value: "Stress", label: "Stress" },
+  { value: "Sleep problems", label: "Sleep problems" },
+  { value: "Emotional regulation", label: "Emotional regulation" },
+  { value: "Overthinking / rumination", label: "Overthinking / rumination" },
+  { value: "Perfectionism", label: "Perfectionism" },
+  { value: "Trauma", label: "Trauma" },
+  { value: "Grief", label: "Grief" },
+
+  // Relationships
   { value: "Relationships", label: "Relationships" },
   { value: "Family", label: "Family" },
+  { value: "Couples", label: "Couples" },
+  { value: "Communication issues", label: "Communication issues" },
+  { value: "Attachment / fear of abandonment", label: "Attachment / fear of abandonment" },
+  { value: "Conflict & boundaries", label: "Conflict & boundaries" },
+  { value: "Social difficulties", label: "Social difficulties" },
+  { value: "Social anxiety", label: "Social anxiety" },
+
+  // Identity & personal life
+  { value: "Self-esteem", label: "Self-esteem" },
   { value: "LGBTQ+", label: "LGBTQ+" },
+  { value: "Gender identity", label: "Gender identity" },
+  { value: "Meaning & life direction", label: "Meaning & life direction" },
+  { value: "Self-exploration", label: "Self-exploration" },
+
+  // Professional life
+  { value: "Career", label: "Career" },
+  { value: "Performance", label: "Performance" },
+  { value: "Major decisions", label: "Major decisions" },
+  { value: "Work-life balance", label: "Work-life balance" },
+
+  // Behaviors
+  { value: "Procrastination", label: "Procrastination" },
+  { value: "Habits I want to change", label: "Habits I want to change" },
+  { value: "Addictions", label: "Addictions" },
+  { value: "Anger management", label: "Anger management" },
+
+  // Clinical topics
+  { value: "ADHD", label: "ADHD" },
+  { value: "Eating disorders", label: "Eating disorders" },
 ];
+
 
 const APPROACHES = [
   { value: "", label: "Any approach" },
   { value: "CBT", label: "CBT" },
-  { value: "Psychodynamic", label: "Psychodynamic" },
   { value: "ACT", label: "ACT" },
-  { value: "Schema", label: "Schema therapy" },
+  { value: "Psychodynamic", label: "Psychodynamic" },
+  { value: "Humanistic", label: "Humanistic" },
+  { value: "Schema therapy", label: "Schema therapy" },
+  { value: "Systemic", label: "Systemic" },
+  { value: "Integrative", label: "Integrative" },
+  { value: "Mindfulness-based", label: "Mindfulness-based" },
   { value: "Gestalt", label: "Gestalt" },
   { value: "DBT", label: "DBT" },
   { value: "EMDR", label: "EMDR" },
-  { value: "Mindfulness", label: "Mindfulness-based" },
 ];
+
 
 const PRICE = [
   { value: "", label: "Any price" },

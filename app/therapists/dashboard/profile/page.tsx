@@ -4,26 +4,51 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 const SPECIALIZATIONS = [
+    // Emotional health
     "Anxiety",
     "Depression",
     "Panic attacks",
     "Burnout",
     "Stress",
+    "Sleep problems",
+    "Emotional regulation",
+    "Overthinking / rumination",
+    "Perfectionism",
+    "Trauma",
+    "Grief",
+
+    // Relationships
     "Relationships",
     "Family",
     "Couples",
-    "Trauma",
-    "Grief",
-    "LGBTQ+",
+    "Communication issues",
+    "Attachment / fear of abandonment",
+    "Conflict & boundaries",
+    "Social difficulties",
+    "Social anxiety",
+
+    // Identity & personal life
     "Self-esteem",
+    "LGBTQ+",
+    "Gender identity",
+    "Meaning & life direction",
+    "Self-exploration",
+
+    // Professional life
     "Career",
+    "Performance",
+    "Major decisions",
+    "Work-life balance",
+
+    // Behaviors
+    "Procrastination",
+    "Habits I want to change",
     "Addictions",
     "Anger management",
-    "Sleep problems",
+
+    // Clinical topics
     "ADHD",
     "Eating disorders",
-    "Perfectionism",
-    "Social anxiety",
 ] as const;
 
 const APPROACHES = [
