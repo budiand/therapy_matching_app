@@ -18,7 +18,7 @@
     "mongoose": "^8.8.1",
     "next": "^14.2.33",
     "next-auth": "^4.24.13",
-    "posthog-js": "^1.298.1",
+    "posthog-js": "^1.318.2",
     "react": "^18",
     "react-dom": "^18",
     "resend": "^6.7.0"
