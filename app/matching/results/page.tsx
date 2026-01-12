@@ -3,6 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import posthog from "posthog-js";
 
 type Match = {
     _id: string;
@@ -46,6 +47,14 @@ export default function ResultsPage() {
                     : [];
 
                 setItems(sorted);
+
+                /* ================= POSTHOG ================= */
+                posthog.capture("matching_results_viewed", {
+                    therapists_count: sorted.length,
+                    has_results: sorted.length > 0,
+                });
+                /* ============================================ */
+
             } catch {
                 setError("Failed to load matches");
             } finally {
@@ -118,18 +127,28 @@ export default function ResultsPage() {
                             <div className="mt-4 flex gap-2">
                                 <button
                                     className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
-                                    onClick={() =>
-                                        router.push(`/therapists/${t._id}`)
-                                    }
+                                    onClick={() => {
+                                        /* ===== POSTHOG: view profile ===== */
+                                        posthog.capture("match_view_profile_clicked", {
+                                            therapist_id: t._id,
+                                        });
+                                        /* ================================= */
+                                        router.push(`/therapists/${t._id}`);
+                                    }}
                                 >
                                     View profile
                                 </button>
 
                                 <button
                                     className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                                    onClick={() =>
-                                        router.push(`/book/${t._id}`)
-                                    }
+                                    onClick={() => {
+                                        /* ===== POSTHOG: book clicked ===== */
+                                        posthog.capture("match_book_clicked", {
+                                            therapist_id: t._id,
+                                        });
+                                        /* ================================ */
+                                        router.push(`/book/${t._id}`);
+                                    }}
                                 >
                                     Book session
                                 </button>

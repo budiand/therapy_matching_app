@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import posthog from "posthog-js";
+
+/* ---------------- Types ---------------- */
 
 type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
 
 type Appointment = {
     id: string;
-    userId: string; // IMPORTANT: userId (nu clientId)
+    userId: string;
     userName: string;
-    dateISO: string; // ISO string
+    dateISO: string;
     durationMin: number;
     location: "online" | "in_person";
     status: AppointmentStatus;
@@ -23,6 +26,8 @@ type UserItem = {
     age?: number;
     lastSessionISO?: string | null;
 };
+
+/* ---------------- Helpers ---------------- */
 
 function formatDateTime(iso: string) {
     const d = new Date(iso);
@@ -39,22 +44,7 @@ function isUpcoming(iso: string) {
     return new Date(iso).getTime() >= Date.now();
 }
 
-function startOfWeek(d: Date) {
-    // Monday-based week
-    const date = new Date(d);
-    const day = date.getDay(); // 0=Sun
-    const diff = (day === 0 ? -6 : 1) - day;
-    date.setDate(date.getDate() + diff);
-    date.setHours(0, 0, 0, 0);
-    return date;
-}
-
-function endOfWeek(d: Date) {
-    const s = startOfWeek(d);
-    const e = new Date(s);
-    e.setDate(e.getDate() + 7);
-    return e;
-}
+/* ---------------- Page ---------------- */
 
 export default function TherapistDashboardPage() {
     const [loading, setLoading] = useState(true);
@@ -65,7 +55,12 @@ export default function TherapistDashboardPage() {
     const [allUpcomingCount, setAllUpcomingCount] = useState<number>(0);
     const [weekCount, setWeekCount] = useState<number>(0);
 
-    // Load dashboard data
+    /* ---- Dashboard viewed ---- */
+    useEffect(() => {
+        posthog.capture("therapist_dashboard_viewed");
+    }, []);
+
+    /* ---- Load dashboard data ---- */
     useEffect(() => {
         let cancelled = false;
 
@@ -74,12 +69,13 @@ export default function TherapistDashboardPage() {
             setError("");
 
             try {
-                // 1) Users (clients list for therapist)
+                /* -------- Clients -------- */
                 const usersRes = await fetch("/api/therapists/clients", { method: "GET" });
                 const usersJson = await usersRes.json().catch(() => null);
                 if (!usersRes.ok) {
-                    throw new Error(usersJson?.error || `Failed to load users (${usersRes.status}).`);
+                    throw new Error(usersJson?.error || `Failed to load users (${usersRes.status})`);
                 }
+
                 const usersList: UserItem[] = (usersJson?.users ?? []).map((u: any) => ({
                     id: String(u.id ?? u._id),
                     name: u.name,
@@ -89,36 +85,34 @@ export default function TherapistDashboardPage() {
                     lastSessionISO: u.lastSessionISO ?? null,
                 }));
 
-                // 2) Appointments (upcoming preview + stats)
-                // Endpoint recomandat: /api/therapists/appointments
-                // query: scope=upcoming, limit=3 pentru preview
-                const apptRes = await fetch("/api/therapists/appointments?scope=upcoming&limit=3", {
-                    method: "GET",
-                });
+                /* -------- Appointments preview -------- */
+                const apptRes = await fetch(
+                    "/api/therapists/appointments?scope=upcoming&limit=3",
+                    { method: "GET" }
+                );
+
                 const apptJson = await apptRes.json().catch(() => null);
                 if (!apptRes.ok) {
-                    // Dacă nu ai încă route-ul, nu blocăm tot dashboard-ul.
-                    // Arătăm users + acțiuni, iar appointments rămân goale.
                     console.warn("Appointments endpoint missing or failing:", apptJson);
                 }
 
-                const previewAppointments: Appointment[] = (apptJson?.appointments ?? []).map((a: any) => ({
-                    id: String(a.id ?? a._id),
-                    userId: String(a.userId ?? a.clientId ?? ""),
-                    userName: String(a.userName ?? a.clientName ?? "User"),
-                    dateISO: new Date(a.dateISO).toISOString(),
-                    durationMin: Number(a.durationMin ?? 50),
-                    location: a.location === "in_person" ? "in_person" : "online",
-                    status: (a.status ?? "scheduled") as AppointmentStatus,
-                }));
+                const previewAppointments: Appointment[] = (apptJson?.appointments ?? []).map(
+                    (a: any) => ({
+                        id: String(a.id ?? a._id),
+                        userId: String(a.userId ?? a.clientId ?? ""),
+                        userName: String(a.userName ?? a.clientName ?? "User"),
+                        dateISO: new Date(a.dateISO).toISOString(),
+                        durationMin: Number(a.durationMin ?? 50),
+                        location: a.location === "in_person" ? "in_person" : "online",
+                        status: (a.status ?? "scheduled") as AppointmentStatus,
+                    })
+                );
 
-                // 3) Stats (optional: server may return counts to avoid loading all)
-                // Dacă route-ul îți trimite și counts, le folosim.
-                const totalUpcoming = Number(apptJson?.counts?.upcoming ?? previewAppointments.filter(a => isUpcoming(a.dateISO)).length);
+                const totalUpcoming = Number(
+                    apptJson?.counts?.upcoming ??
+                        previewAppointments.filter((a) => isUpcoming(a.dateISO)).length
+                );
 
-                // This week: dacă server trimite counts.week îl folosim.
-                // altfel, calculăm din "appointmentsAllThisWeek" dacă îl trimiți.
-                // aici încercăm să citim apptJson.counts.week, altfel 0.
                 const totalThisWeek = Number(apptJson?.counts?.thisWeek ?? 0);
 
                 if (!cancelled) {
@@ -126,16 +120,30 @@ export default function TherapistDashboardPage() {
                     setUpcoming(previewAppointments);
                     setAllUpcomingCount(totalUpcoming);
                     setWeekCount(totalThisWeek);
+
+                    /* ---- Dashboard loaded (PostHog) ---- */
+                    posthog.capture("therapist_dashboard_loaded", {
+                        active_clients: usersList.length,
+                        upcoming_preview_count: previewAppointments.length,
+                        upcoming_total: totalUpcoming,
+                        week_count: totalThisWeek,
+                    });
                 }
             } catch (e: any) {
-                if (!cancelled) setError(e?.message || "Failed to load dashboard.");
+                if (!cancelled) {
+                    setError(e?.message || "Failed to load dashboard.");
+
+                    /* ---- Dashboard load failed (PostHog) ---- */
+                    posthog.capture("therapist_dashboard_load_failed", {
+                        error: e?.message ?? "unknown_error",
+                    });
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
         }
 
         load();
-
         return () => {
             cancelled = true;
         };
@@ -143,10 +151,7 @@ export default function TherapistDashboardPage() {
 
     const activeClients = users.length;
 
-    // fallback if server didn't provide weekCount:
     const weekCountFallback = useMemo(() => {
-        // If you later decide to fetch all appointments, calculate here.
-        // For now, keep the value we got (could be 0 if endpoint doesn’t send it).
         return weekCount;
     }, [weekCount]);
 
@@ -164,6 +169,11 @@ export default function TherapistDashboardPage() {
 
                     <Link
                         href="/therapists/dashboard/profile"
+                        onClick={() =>
+                            posthog.capture("therapist_dashboard_click", {
+                                destination: "profile",
+                            })
+                        }
                         className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
                     >
                         Edit profile
@@ -180,7 +190,10 @@ export default function TherapistDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
                     <StatCard title="Upcoming sessions" value={loading ? "—" : String(allUpcomingCount)} />
                     <StatCard title="Active clients" value={loading ? "—" : String(activeClients)} />
-                    <StatCard title="This week" value={loading ? "—" : `${weekCountFallback} sessions`} />
+                    <StatCard
+                        title="This week"
+                        value={loading ? "—" : `${weekCountFallback} sessions`}
+                    />
                     <StatCard title="Profile status" value={loading ? "—" : "Pending review"} />
                 </div>
 
@@ -191,19 +204,16 @@ export default function TherapistDashboardPage() {
                         description="View and manage your scheduled sessions."
                         href="/therapists/dashboard/appointments"
                     />
-
                     <DashboardCard
                         title="Availability"
                         description="Set your weekly availability."
                         href="/therapists/dashboard/availability"
                     />
-
                     <DashboardCard
                         title="Clients"
                         description="View all your clients and notes."
                         href="/therapists/dashboard/clients"
                     />
-
                     <DashboardCard
                         title="Profile"
                         description="Update your professional profile."
@@ -253,17 +263,25 @@ function StatCard({ title, value }: { title: string; value: string }) {
 }
 
 function DashboardCard({
-                           title,
-                           description,
-                           href,
-                       }: {
+    title,
+    description,
+    href,
+}: {
     title: string;
     description: string;
     href: string;
 }) {
+    function onClick() {
+        posthog.capture("therapist_dashboard_click", {
+            destination: title.toLowerCase().replace(/\s+/g, "_"),
+            href,
+        });
+    }
+
     return (
         <Link
             href={href}
+            onClick={onClick}
             className="bg-white rounded-xl border p-6 shadow-sm hover:shadow-md transition"
         >
             <h3 className="font-semibold text-lg">{title}</h3>
@@ -273,10 +291,10 @@ function DashboardCard({
 }
 
 function AppointmentRow({
-                            name,
-                            when,
-                            href,
-                        }: {
+    name,
+    when,
+    href,
+}: {
     name: string;
     when: string;
     href: string;
@@ -290,6 +308,12 @@ function AppointmentRow({
 
             <Link
                 href={href}
+                onClick={() =>
+                    posthog.capture("therapist_open_client", {
+                        client_name: name,
+                        source: "dashboard_upcoming_preview",
+                    })
+                }
                 className="text-indigo-600 text-sm font-medium hover:underline"
             >
                 Open
